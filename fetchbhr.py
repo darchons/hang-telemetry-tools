@@ -63,7 +63,7 @@ if __name__ == '__main__':
         'sessions': {},
     }
     with tempfile.NamedTemporaryFile('r', suffix='.txt', dir=workdir) as outfile:
-        runJob("bhr.py", dims, workdir, outfile.name, local=localonly)
+        runJob("mapreduce-bhr.py", dims, workdir, outfile.name, local=localonly)
         with open(outfile.name, 'r') as jobfile:
             processBHR(index, jobfile, outdir)
 
