@@ -1,5 +1,5 @@
 # Same as the osdistribution.py example in jydoop
-import json
+import simplejson as json
 import mapreduce_common
 
 def map(raw_key, raw_dims, raw_value, cx):
