@@ -18,7 +18,7 @@ def map(raw_key, raw_dims, raw_value, cx):
         mapreduce_common.addUptime(info, j)
         dims = mapreduce_common.filterDimensions(raw_dims, info)
     except KeyError:
-        pass
+        return
     for thread in j['threadHangStats']:
         name = thread['name']
         cx.write((name, None), (dims, info, thread['activity']))
