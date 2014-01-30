@@ -211,7 +211,7 @@ if __name__ == '__main__':
     }
     allowed_infos = {}
     with tempfile.NamedTemporaryFile('r', suffix='.txt', dir=workdir) as outfile:
-        runJob("mapreduce-dims.py", dims, workdir, outfile.name, local=worklocalonly)
+        runJob("mapreduce-anr.py", dims, workdir, outfile.name, local=worklocalonly)
         with open(outfile.name, 'r') as jobfile:
             processDims(index, dims, allowed_infos, jobfile, outdir)
 
