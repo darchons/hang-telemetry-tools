@@ -1,6 +1,7 @@
 #!/usr/bin/python2
 
-import gzip, os, json, subprocess, sys, tempfile, uuid
+import gzip, os, subprocess, sys, tempfile, uuid
+import simplejson as json
 
 def runJob(job, dims, workdir, outfile, local=False):
     with tempfile.NamedTemporaryFile('w', suffix='.json', dir=workdir) as filterfile:

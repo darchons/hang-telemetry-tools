@@ -2,7 +2,8 @@
 
 if __name__ == '__main__':
 
-    import json, os, sys, tempfile
+    import os, sys, tempfile
+    import simplejson as json
     from datetime import datetime, timedelta
     from fetchtelemetry import processBHR, runJob
 

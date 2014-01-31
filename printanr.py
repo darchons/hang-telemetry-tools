@@ -6,7 +6,8 @@
 
 if __name__ == '__main__':
 
-    import json, os, sys
+    import os, sys
+    import simplejson as json
     from anr import ANRReport
 
     def printLine(l):
