@@ -133,9 +133,9 @@ def processBHR(index, jobfile, outdir):
         slug = str(uuid.uuid4())
         mainthreads[slug] = [{'name': 'main', 'stack': stack}]
         for k, v in stats.iteritems():
-            dimsinfo.setdefault(k, {})[slug] = adjustCounts(v)
             mergeHangTime(sessions.setdefault(k, {})
                                   .setdefault('hangtime', {}), slug, v)
+            dimsinfo.setdefault(k, {})[slug] = adjustCounts(v)
 
     saveFile(outdir, 'main_thread', index, mainthreads)
     for field, dim in dimsinfo.iteritems():
