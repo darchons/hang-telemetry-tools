@@ -41,10 +41,19 @@ if __name__ == '__main__':
         'allowed_values': ['saved-session']
     }, {
         'field_name': 'appName',
-        'allowed_values': '*'
+        'allowed_values': [
+            'Fennec',
+            'Firefox',
+            'Thunderbird',
+            'Webapp Runtime',
+            'MetroFirefox',
+        ]
     }, {
         'field_name': 'appUpdateChannel',
-        'allowed_values': ['nightly', 'aurora']
+        'allowed_values': [
+            'nightly',
+            'aurora'
+        ]
     }, {
         'field_name': 'appVersion',
         'allowed_values': '*'

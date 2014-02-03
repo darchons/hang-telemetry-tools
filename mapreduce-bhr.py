@@ -30,7 +30,9 @@ def map(raw_key, raw_dims, raw_value, cx):
         cx.write((None, None), (dims, info, uptime))
 
 def reduce(raw_key, raw_values, cx):
-    if not raw_values or (raw_key[0] is not None and len(raw_values) < 5):
+    if not raw_values or (raw_key[0] is not None and
+                          raw_key[1] is not None and
+                          len(raw_values) < 100):
         return
     result = {}
 
