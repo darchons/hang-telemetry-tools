@@ -1,6 +1,9 @@
 import simplejson as json
 import mapreduce_common
 
+mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_anr
+mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_anr
+
 def map(slug, dims, value, context):
     context.write("all", 1)
     ping = json.loads(value)

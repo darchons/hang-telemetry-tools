@@ -77,7 +77,7 @@ if __name__ == '__main__':
         with open(outfile.name, 'r') as jobfile:
             processBHR(index, jobfile, outdir)
 
-    runJob("mapreduce-summary.py", dims, workdir,
+    runJob("mapreduce-bhr-summary.py", dims, workdir,
            os.path.join(outdir, 'summary.txt'), local=True)
 
     with open(os.path.join(outdir, 'index.json'), 'w') as outfile:

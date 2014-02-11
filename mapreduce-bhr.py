@@ -2,6 +2,9 @@
 import simplejson as json
 import mapreduce_common
 
+mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
+mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
+
 def map(raw_key, raw_dims, raw_value, cx):
     if '"threadHangStats":' not in raw_value:
         return

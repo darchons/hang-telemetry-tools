@@ -246,11 +246,11 @@ if __name__ == '__main__':
     with tempfile.NamedTemporaryFile('r', suffix='.txt', dir=sessionsdir) as outfile:
         local = 'saved-session' in dims[0]['allowed_values'] or sessionlocalonly
         dims[0]['allowed_values'] = ['saved-session'];
-        runJob("mapreduce-sessions.py", dims, sessionsdir, outfile.name, local=local)
+        runJob("mapreduce-anr-sessions.py", dims, sessionsdir, outfile.name, local=local)
         with open(outfile.name, 'r') as sessionsfile:
             processSessions(index, dims, allowed_infos, sessionsfile, outdir)
 
-    runJob("mapreduce-summary.py", dims, sessionsdir,
+    runJob("mapreduce-anr-summary.py", dims, sessionsdir,
            os.path.join(outdir, 'summary.txt'), local=True)
 
     with open(os.path.join(outdir, 'index.json'), 'w') as outfile:

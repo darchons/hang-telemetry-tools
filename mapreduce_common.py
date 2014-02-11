@@ -1,11 +1,37 @@
 import math
 
-allowed_infos = [
-    'appName',
+allowed_infos = None
+allowed_dimensions = None
+
+allowed_infos_anr = [
+    'appUpdateChannel',
     'appVersion',
     'appBuildID',
     'locale',
     'device',
+    'cpucount',
+    'memsize',
+    'os',
+    'arch',
+    'uptime',
+]
+
+allowed_dimensions_anr = [
+    'appName',
+    'appVersion',
+    'arch',
+    'cpucount',
+    'memsize',
+    'os',
+    'submission_date',
+]
+
+allowed_infos_bhr = [
+    'appName',
+    'appUpdateChannel',
+    'appVersion',
+    'appBuildID',
+    'locale',
     'cpucount',
     'memsize',
     'os',
@@ -15,6 +41,16 @@ allowed_infos = [
     'uptime',
 ]
 
+allowed_dimensions_bhr = [
+    'appName',
+    'appVersion',
+    'arch',
+    'cpucount',
+    'memsize',
+    'platform',
+    'submission_date',
+]
+
 dimensions = [
     'reason',
     'appName',
@@ -22,15 +58,6 @@ dimensions = [
     'appVersion',
     'appBuildID',
     'submission_date',
-]
-
-allowed_dimensions = [
-    'submission_date',
-    'appName',
-    'appVersion',
-    'platform',
-    'cpucount',
-    'memsize',
 ]
 
 def addUptime(info, ping):

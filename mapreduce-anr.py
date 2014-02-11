@@ -4,6 +4,9 @@ from collections import OrderedDict
 from anr import ANRReport
 import mapreduce_common
 
+mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_anr
+mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_anr
+
 re_subname = re.compile(r'\$\w*\d+')
 
 def processFrame(frame):
