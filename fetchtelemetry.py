@@ -108,7 +108,8 @@ def processBHR(index, jobfile, outdir):
                     for time, counts in time_histogram.iteritems():
                         dest_histogram[time] = (counts +
                             dest_histogram.get(time, 0))
-            dest.setdefault(dim_val, {})[slug] = dest_histogram
+            dest.setdefault(dim_val, {}).setdefault(
+                'name', {})[slug] = dest_histogram
     for line in jobfile:
         parts = line.partition('\t')
         stacks = json.loads(parts[0])
