@@ -20,15 +20,15 @@ fi
 echo "Running ANR analyzer for $START to $END"
 
 BASE=$(pwd)
-if [ -d "$BASE/anr-analyzer" ]; then
-    cd $BASE/anr-analyzer
+if [ -d "$BASE/hang-telemetry-tools" ]; then
+    cd $BASE/hang-telemetry-tools
     git pull
     cd -
 else
-    git clone https://github.com/darchons/anr-analyzer
+    git clone https://github.com/darchons/hang-telemetry-tools
 fi
 cd ~/telemetry-server
-python $BASE/anr-analyzer/fetchtelemetry.py $START $END
+python $BASE/hang-telemetry-tools/fetchanr.py $START $END
 echo "Job exited with code: $?"
 cd -
 echo "Moving $FIRST_OUTPUT_DIR to final output dir"

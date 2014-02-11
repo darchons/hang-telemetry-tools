@@ -5,7 +5,7 @@ if __name__ == '__main__':
     import os, sys, tempfile
     import simplejson as json
     from datetime import datetime, timedelta
-    from fetchtelemetry import processBHR, runJob
+    from fetchanr import processBHR, runJob
 
     if len(sys.argv) != 3:
         print 'Usage %s <from> <to>' % (sys.argv[0])

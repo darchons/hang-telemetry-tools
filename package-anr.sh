@@ -1,9 +1,9 @@
 #!/bin/bash
-VERSION=0.2
+VERSION=0.3
 NAME=anr
 TARBALL=${NAME}-$VERSION.tar.gz
 tar czvf $TARBALL \
-    run.sh
+    run-anr.sh
 S3PATH=s3://telemetry-analysis-code/$NAME/$TARBALL
 
 echo "Packaged $NAME code as $TARBALL"
