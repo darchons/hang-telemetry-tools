@@ -94,11 +94,19 @@ def processBHR(index, jobfile, outdir):
     mainthreads = {}
     dimsinfo = {}
     sessions = {}
-    def adjustCounts(dim_vals):
-        for info_keys in dim_vals.itervalues():
+    count_lists = {}
+
+    def adjustCounts(dim_vals, slug, count_lists):
+        for dim_val, info_keys in dim_vals.iteritems():
+            max_count = 0
             for info_vals in info_keys.itervalues():
+                info_count = 0
                 for val, counts in info_vals.iteritems():
-                    info_vals[val] = sum(counts.itervalues())
+                    count = sum(counts.itervalues())
+                    info_vals[val] = count
+                    info_count += count
+                max_count = max(max_count, info_count)
+            count_lists.setdefault(dim_val, []).append((slug, max_count))
         return dim_vals
     def mergeHangTime(dest, slug, dim_vals):
         for dim_val, info_keys in dim_vals.iteritems():
@@ -110,6 +118,7 @@ def processBHR(index, jobfile, outdir):
                             dest_histogram.get(time, 0))
             dest.setdefault(dim_val, {}).setdefault(
                 'name', {})[slug] = dest_histogram
+
     for line in jobfile:
         parts = line.partition('\t')
         stacks = json.loads(parts[0])
@@ -136,7 +145,24 @@ def processBHR(index, jobfile, outdir):
         for k, v in stats.iteritems():
             mergeHangTime(sessions.setdefault(k, {})
                                   .setdefault('hangtime', {}), slug, v)
-            dimsinfo.setdefault(k, {})[slug] = adjustCounts(v)
+            dimsinfo.setdefault(k, {})[slug] = adjustCounts(
+                v, slug, count_lists.setdefault(k, {}))
+
+    slug_filter = []
+    for dim_key, dim_vals in count_lists.iteritems():
+        for dim_val, count_list in dim_vals.iteritems():
+            count_list.sort(key=lambda x: x[1])
+            slug_filter.extend(x[0] for x in count_list[:10])
+    for slugs in dimsinfo.itervalues():
+        for slug in slugs.iterkeys():
+            if slug not in slug_filter:
+                del slugs[slug]
+    for session in sessions.itervalues():
+        for info_keys in session['hangtime'].itervalues():
+            slugs = info_keys['name']
+            for slug in slugs.iterkeys():
+                if slug not in slug_filter:
+                    del slugs[slug]
 
     saveFile(outdir, 'main_thread', index, mainthreads)
     for field, dim in dimsinfo.iteritems():
