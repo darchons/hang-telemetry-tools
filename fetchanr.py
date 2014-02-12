@@ -164,13 +164,13 @@ def processBHR(index, jobfile, outdir):
             count_list.sort(key=lambda x: x[1])
             slug_filter.extend(x[0] for x in count_list[:10])
     for slugs in dimsinfo.itervalues():
-        for slug in slugs.iterkeys():
+        for slug in list(slugs.iterkeys()):
             if slug not in slug_filter:
                 del slugs[slug]
     for session in sessions.itervalues():
         for info_keys in session['hangtime'].itervalues():
             slugs = info_keys['name']
-            for slug in slugs.iterkeys():
+            for slug in list(slugs.iterkeys()):
                 if slug not in slug_filter:
                     del slugs[slug]
 
