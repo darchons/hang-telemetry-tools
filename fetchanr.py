@@ -162,7 +162,7 @@ def processBHR(index, jobfile, outdir):
     slug_filter = []
     for dim_key, dim_vals in count_lists.iteritems():
         for dim_val, count_list in dim_vals.iteritems():
-            count_list.sort(key=lambda x: x[1])
+            count_list.sort(key=lambda x: x[1], reverse=True)
             slug_filter.extend(x[0] for x in count_list[:10])
     for slugs in dimsinfo.itervalues():
         for slug in list(slugs.iterkeys()):
