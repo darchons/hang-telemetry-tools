@@ -78,4 +78,5 @@ def reduce(raw_key, raw_values, cx):
             collect(result.setdefault(k, {}).setdefault(dim_val, {}),
                     info, counts)
 
-    cx.write(json.dumps(raw_key), json.dumps(result))
+    cx.write(json.dumps(raw_key, separators=(',', ':')),
+             json.dumps(result, separators=(',', ':')))

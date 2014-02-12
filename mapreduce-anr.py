@@ -88,4 +88,4 @@ def reduce(key, values, context):
         'slugs': slugs,
         'display': key[0],
         'symbolicatorInfo': sample.rawData['info'],
-    }))
+    }, separators=(',', ':')))

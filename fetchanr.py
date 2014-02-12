@@ -34,7 +34,7 @@ def runJob(job, dims, workdir, outfile, local=False):
 def saveFile(outdir, name, index, data, prefix=''):
     fn = prefix + name + '.json.gz'
     with gzip.open(os.path.join(outdir, fn), 'wb') as outfile:
-        outfile.write(json.dumps(data))
+        outfile.write(json.dumps(data, separators=(',', ':')))
     index[name] = fn
 
 def processDims(index, dims, allowed_infos, jobfile, outdir):
@@ -180,8 +180,6 @@ def processBHR(index, jobfile, outdir):
         saveFile(outdir, field, index['dimensions'], dim, prefix='dim_')
     for fieldname, sessionsvalue in sessions.iteritems():
         saveFile(outdir, fieldname, index['sessions'], sessionsvalue, prefix='ses_')
-    with open(os.path.join(outdir, 'index.json'), 'w') as outfile:
-        outfile.write(json.dumps(index))
 
 if __name__ == '__main__':
 
@@ -265,7 +263,7 @@ if __name__ == '__main__':
            os.path.join(outdir, 'summary.txt'), local=True)
 
     with open(os.path.join(outdir, 'index.json'), 'w') as outfile:
-        outfile.write(json.dumps(index))
+        outfile.write(json.dumps(index, separators=(',', ':')))
 
     print 'Completed'
 

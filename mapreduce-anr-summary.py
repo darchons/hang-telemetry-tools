@@ -32,6 +32,6 @@ def reduce(key, values, context):
     median = int(round(mapreduce_common.estQuantile(values, 2)[0]))
     lower = int(round(lower))
     upper = int(round(upper))
-    context.write(json.dumps(key), json.dumps((
+    context.write(json.dumps(key, separators=(',', ':')), json.dumps((
         len(values), median, lower, upper
-    )))
+    ), separators=(',', ':')))

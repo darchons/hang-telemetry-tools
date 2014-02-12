@@ -81,7 +81,7 @@ if __name__ == '__main__':
            os.path.join(outdir, 'summary.txt'), local=True)
 
     with open(os.path.join(outdir, 'index.json'), 'w') as outfile:
-        outfile.write(json.dumps(index))
+        outfile.write(json.dumps(index, separators=(',', ':')))
 
     print 'Completed'
 
