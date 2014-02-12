@@ -149,8 +149,8 @@ def processBHR(index, jobfile, outdir):
                 sessions.setdefault(k, {})[tag] = v
             continue
         # hang measurements
-        stack = ['p:' + f.replace('::', '.') + ':'
-                 for f in reversed(stacks[1])] + ['p:' + stacks[0] + ':']
+        stack = (['p:' + f for f in reversed(stacks[1])] +
+                 ['p:' + stacks[0]])
         slug = str(uuid.uuid4())
         mainthreads[slug] = [{'name': 'main', 'stack': stack}]
         for k, v in stats.iteritems():

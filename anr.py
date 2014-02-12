@@ -158,6 +158,9 @@ class ANRReport:
                 self.nativeFunction += '+' + str(frame['line'])
 
         def __str__(self):
+            if self.isPseudo:
+                return 'p:%s' % (
+                    self.nativeFunction if self.nativeFunction else '')
             if self.isNative:
                 return 'c:%s:%s' % (
                     self.nativeLib if self.nativeLib else '',
