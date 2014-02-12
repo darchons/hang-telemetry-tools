@@ -2,6 +2,7 @@
 
 import gzip, os, subprocess, sys, tempfile, uuid
 import simplejson as json
+import symbolicator
 
 def runJob(job, dims, workdir, outfile, local=False):
     with tempfile.NamedTemporaryFile('w', suffix='.json', dir=workdir) as filterfile:
@@ -46,6 +47,15 @@ def processDims(index, dims, allowed_infos, jobfile, outdir):
         anr = json.loads(line.partition('\t')[2])
         slug = anr['slugs'][0][-1]
         slugs[slug] = anr['slugs']
+        sym = None
+        for t in anr['threads']:
+            if 'native' not in t['name'].lower():
+                continue
+            if not sym:
+                sym = symbolicator.Symbolicator.fromBuild(
+                    os.path.dirname(jobfile), anr['symbolicatorInfo'])
+                sym.fetchBinaries()
+            t['stack'] = symbolicator.symbolicateStack(t['stack'], sym=sym)
         mainthread = next(t for t in anr['threads']
                           if t['name'] == anr['display'])
         mainthreads[slug] = [mainthread]

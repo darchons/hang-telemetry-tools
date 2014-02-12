@@ -86,5 +86,6 @@ def reduce(key, values, context):
                 'stack': [str(f) for f in t.stack]
             } for t in sample.getBackgroundThreads()],
         'slugs': slugs,
-        'display': key[0]
+        'display': key[0],
+        'symbolicatorInfo': sample.rawData['info'],
     }))
