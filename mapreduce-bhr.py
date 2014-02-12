@@ -1,6 +1,7 @@
 # Same as the osdistribution.py example in jydoop
 import simplejson as json
 import mapreduce_common
+import itertools
 
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
@@ -22,11 +23,15 @@ def map(raw_key, raw_dims, raw_value, cx):
         dims = mapreduce_common.filterDimensions(raw_dims, info)
     except KeyError:
         return
+
+    def filterStack(stack):
+        return (x[0] for x in itertools.groupby(stack))
+
     for thread in j['threadHangStats']:
         name = thread['name']
         cx.write((name, None), (dims, info, thread['activity']))
         for hang in thread['hangs']:
-            cx.write((name, tuple(hang['stack'])),
+            cx.write((name, tuple(filterStack(hang['stack']))),
                      (dims, info, hang['histogram']))
         cx.write((None, name), (dims, info, uptime))
     if j['threadHangStats']:
