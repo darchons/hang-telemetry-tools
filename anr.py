@@ -20,7 +20,7 @@ THREAD_BLACKLIST = [
 
 THREAD_WHITELIST = [
     re.compile(r'^Gecko'),
-    re.compile(r'^Compositor$'),
+    re.compile(r'^Compositor'),
 ]
 
 class ANRReport:
