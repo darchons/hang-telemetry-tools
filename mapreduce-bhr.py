@@ -40,7 +40,7 @@ def map(raw_key, raw_dims, raw_value, cx):
 def reduce(raw_key, raw_values, cx):
     if not raw_values or (raw_key[0] is not None and
                           raw_key[1] is not None and
-                          len(raw_values) < 100):
+                          len(raw_values) < 10):
         return
     result = {}
 
