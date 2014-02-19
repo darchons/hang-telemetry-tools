@@ -2,6 +2,7 @@ import re
 import simplejson as json
 from collections import OrderedDict
 from anr import ANRReport
+import itertools
 import mapreduce_common
 
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_anr
@@ -40,13 +41,16 @@ def map(slug, dims, value, context):
         ignoreList.pop()
         key_stack = getStack(stack)
 
+    def filterStack(stack):
+        return (x[0] for x in itertools.groupby(stack))
+
     def getNativeStack():
         nativeThread = 'GeckoMain (native)'
         nativeMain = anr.getThread(nativeThread)
         if nativeMain is None:
             return (key_thread, key_stack)
-        nativeStack = [str(f).partition('+')[0]
-                       for f in nativeMain.stack if f.isPseudo]
+        nativeStack = list(filterStack(str(f).partition('+')[0]
+            for f in nativeMain.stack if f.isPseudo))
         if not nativeStack:
             return (key_thread, key_stack)
         return (nativeThread, nativeStack)
