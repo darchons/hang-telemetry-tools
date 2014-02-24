@@ -33,9 +33,11 @@ def map(raw_key, raw_dims, raw_value, cx):
         for hang in thread['hangs']:
             cx.write((name, tuple(filterStack(hang['stack']))),
                      (dims, info, hang['histogram']))
-        cx.write((None, name), (dims, info, uptime))
+        for k, dim_val in dims.iteritems():
+            cx.write((None, name, k, dim_val), ({k: dim_val}, info, uptime))
     if j['threadHangStats']:
-        cx.write((None, None), (dims, info, uptime))
+        for k, dim_val in dims.iteritems():
+            cx.write((None, None, k, dim_val), ({k: dim_val}, info, uptime))
 
 def reduce(raw_key, raw_values, cx):
     if not raw_values or (raw_key[0] is not None and

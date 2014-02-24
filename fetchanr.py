@@ -140,7 +140,8 @@ def processBHR(index, jobfile, outdir):
             if stacks[1] is not None:
                 tag += ':' + stacks[1]
             for k, v in stats.iteritems():
-                sessions.setdefault(k, {})[tag] = v
+                for vk, vv in v.iteritems():
+                    sessions.setdefault(k, {}).setdefault(tag, {})[vk] = vv
             continue
         if stacks[1] is None:
             # activity measurements
