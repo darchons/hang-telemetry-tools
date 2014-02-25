@@ -6,7 +6,11 @@ import itertools
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
 
+SKIP = 0
+
 def map(raw_key, raw_dims, raw_value, cx):
+    if SKIP > 0 and (hash(raw_key) % (SKIP + 1)) != 0:
+        return
     if '"threadHangStats":' not in raw_value:
         return
     try:
