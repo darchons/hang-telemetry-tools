@@ -175,6 +175,9 @@ def processBHR(index, jobfile, outdir):
             for slug in list(slugs.iterkeys()):
                 if slug not in slug_filter:
                     del slugs[slug]
+    for slug in list(mainthreads.iterkeys()):
+        if slug not in slug_filter:
+            del mainthreads[slug]
 
     saveFile(outdir, 'main_thread', index, mainthreads)
     for field, dim in dimsinfo.iteritems():
