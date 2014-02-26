@@ -2,6 +2,7 @@
 import simplejson as json
 import mapreduce_common
 import itertools
+import __builtin__
 
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
@@ -72,7 +73,7 @@ def do_combine(raw_key, raw_values):
         return left
     def merge(left, right):
         return (left[0] + right[0], merge_dict(left[1], right[1]))
-    return raw_key, reduce(merge, raw_values)
+    return raw_key, __builtin__.reduce(merge, raw_values)
 
 def combine(raw_key, raw_values, cx):
     key, value = do_combine(raw_key, raw_values)
