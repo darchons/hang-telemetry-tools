@@ -62,6 +62,8 @@ def map(raw_key, raw_dims, raw_value, cx):
         cx.write((name, None),
                  collectData(dims, info, thread['activity']['values']))
         for hang in thread['hangs']:
+            if not hang['stack']):
+                continue
             cx.write((name, tuple(filterStack(hang['stack']))),
                      collectData(dims, info, hang['histogram']['values']))
         cx.write((None, name), collectedUptime)
