@@ -1,13 +1,19 @@
-# Same as the osdistribution.py example in jydoop
-import simplejson as json
-import mapreduce_common
-import itertools
 import __builtin__
+import itertools
+import mapreduce_common
+import math
+import simplejson as json
 
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
 
 SKIP = 0
+
+def log(x):
+    return round(math.log(x + 1), 2)
+
+def invlog(x):
+    return int(round(math.exp(x) - 1))
 
 def map(raw_key, raw_dims, raw_value, cx):
     if SKIP > 0 and (hash(raw_key) % (SKIP + 1)) != 0:
@@ -36,6 +42,8 @@ def map(raw_key, raw_dims, raw_value, cx):
         if isinstance(data, dict):
             data = {k: v for k, v in data.iteritems()
                     if v and k.isdigit()}
+        else:
+            data = {log(data): 1}
         return (1, {
             dim_key: {
                 dim_val: {
@@ -85,6 +93,36 @@ def reduce(raw_key, raw_values, cx):
         return
 
     key, value = do_combine(raw_key, raw_values)
+
+    def sumLogHistogram(histogram, n):
+        limit = sum(histogram.itervalues()) / n
+        def placeLimit(keys):
+            left = limit
+            for k in keys:
+                left -= histogram[k]
+                if left < 0:
+                    histogram[k] = limit - left
+                    return
+                del histogram[k]
+        placeLimit(sorted(histogram.keys()))
+        placeLimit(reversed(sorted(histogram.keys())))
+        s = 0
+        for k, v in histogram.iteritems():
+            s += invlog(k) * v
+        return s
+
+    def sumUptimes(histograms, n):
+        if not isinstance(next(histograms.itervalues()), dict):
+            return sumLogHistogram(histograms, n)
+        for k, v in histograms.iteritems():
+            ret = sumUptimes(v, n)
+            if ret is not None:
+                histograms[k] = ret
+        return None
+
+    if raw_key[0] is None:
+        sumUptimes(value[1], 10)
+
     cx.write(json.dumps(key, separators=(',', ':')),
              json.dumps(value[1], separators=(',', ':')))
 
