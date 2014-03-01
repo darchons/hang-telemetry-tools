@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 
 import gzip, os, subprocess, sys, tempfile, uuid
 import simplejson as json
