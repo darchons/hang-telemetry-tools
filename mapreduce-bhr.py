@@ -87,7 +87,7 @@ def do_combine(raw_key, raw_values):
 
 def combine(raw_key, raw_values, cx):
     key, value = do_combine(raw_key, raw_values)
-    cx.combine_size = 1000
+    cx.combine_size = 500
     cx.write(key, value)
 
 def reduce(raw_key, raw_values, cx):
