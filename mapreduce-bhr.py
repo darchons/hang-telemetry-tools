@@ -97,31 +97,29 @@ def reduce(raw_key, raw_values, cx):
 
     key, value = do_combine(raw_key, raw_values)
 
-    def sumLogHistogram(histogram, n):
-        limit = sum(histogram.itervalues()) / n
-        def placeLimit(keys):
-            left = limit
-            for k in keys:
-                left -= histogram[k]
-                if left < 0:
-                    histogram[k] = limit - left
-                    return
-                del histogram[k]
-        placeLimit(sorted(histogram.keys()))
-        placeLimit(reversed(sorted(histogram.keys())))
-        s = 0
-        for k, v in histogram.iteritems():
-            s += invlog(k) * v
-        return s
+    def sumLogHistogram(info_vals, quantiles):
+        keys = sorted((log, count)
+                      for histogram in info_vals.itervalues()
+                      for log, count in histogram.iteritems())
+        limit = sum(count for log, count in keys) / quantiles
+        def findBound(keys):
+            remaining = limit
+            for i, (log, count) in enumerate(keys):
+                remaining -= count
+                if remaining < 0:
+                    return log
+        lower = findBound(keys)
+        keys.reverse()
+        upper = findBound(keys)
+        return {info_val: sum(invlog(min(max(log, lower), upper)) * count
+                              for log, count in histogram.iteritems())
+                for info_val, histogram in info_vals.iteritems()}
 
-    def sumUptimes(histograms, n):
-        if not isinstance(next(histograms.itervalues()), dict):
-            return sumLogHistogram(histograms, n)
-        for k, v in histograms.iteritems():
-            ret = sumUptimes(v, n)
-            if ret is not None:
-                histograms[k] = ret
-        return None
+    def sumUptimes(histograms, quantiles):
+        for dim_name, dim_vals in histograms.iteritems():
+            for dim_val, info_names in dim_vals.iteritems():
+                for info_name, info_vals in info_names.iteritems():
+                    info_names[info_name] = sumLogHistogram(info_vals, quantiles)
 
     if raw_key[0] is None:
         sumUptimes(value[1], 10)
