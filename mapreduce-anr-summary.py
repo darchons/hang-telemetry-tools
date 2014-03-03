@@ -5,12 +5,12 @@ mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_anr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_anr
 
 def map(slug, dims, value, context):
-    context.write("all", 1)
+    context.write(("ping", "all"), 1)
     ping = json.loads(value)
     if ('info' not in ping or
         'simpleMeasurements' not in ping or
         'uptime' not in ping['simpleMeasurements']):
-        context.write("corrupt", 1)
+        context.write(("ping", "corrupt"), 1)
         return
     raw_sm = ping['simpleMeasurements']
     uptime = raw_sm['uptime']
