@@ -84,12 +84,33 @@ def reduce(key, values, context):
                 counts = diminfo.setdefault(infokey, {})
                 counts[infovalue] = counts.get(infovalue, 0) + 1
         slugs.append(slug)
-    sample = max(anrs, key=lambda anr:anr.detail)
 
+    key_thread = key[0]
     def filterThreadName(name):
         if name == 'GeckoMain (native)':
             return 'Gecko (native)'
         return name
+    def anrCmp(left, right):
+        def findThread(anr):
+            main = anr.mainThread
+            if main and main.name == key_thread:
+                return main
+            for thread in anr.getBackgroundThreads():
+                if filterThreadName(thread.name) == key_thread:
+                    return thread
+            return None
+        left_thread = findThread(left)
+        right_thread = findThread(right)
+        if (left_thread and right_thread and
+            len(left_thread.stack) != len(right_thread.stack)):
+            return cmp(len(left_thread.stack), len(right_thread.stack))
+        return cmp(left.detail, right.detail)
+    sample = anrs[0]
+    for anr in anrs:
+        if anr is sample:
+            continue
+        if anrCmp(sample, anr) < 0:
+            sample = anr
 
     context.write(slugs[0], json.dumps({
         'info': info,
@@ -101,6 +122,6 @@ def reduce(key, values, context):
                 'stack': [str(f) for f in t.stack]
             } for t in sample.getBackgroundThreads()],
         'slugs': slugs,
-        'display': key[0],
+        'display': key_thread,
         'symbolicatorInfo': sample.rawData['info'],
     }, separators=(',', ':')))
