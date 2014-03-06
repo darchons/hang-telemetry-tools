@@ -2,7 +2,6 @@ import re
 import simplejson as json
 from collections import OrderedDict
 from anr import ANRReport
-import itertools
 import mapreduce_common
 
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_anr
@@ -22,35 +21,40 @@ def map(slug, dims, value, context):
     stack = [str(frame).split(':')[1] for frame in stack
              if not frame.isNative]
 
-    # least stable to most stable
-    ignoreList = [
-        'com.android.internal.',
-        'com.android.',
-        'dalvik.',
-        'android.',
-        'java.lang.',
-    ]
-
-    def getStack(stack):
-        return list(OrderedDict.fromkeys(
-            [processFrame(frame) for frame in stack
-             if not any(frame.startswith(prefix) for prefix in ignoreList)]))
-    key_thread = mainThread.name
-    key_stack = getStack(stack)
-    while ignoreList and len(key_stack) < 10:
-        ignoreList.pop()
-        key_stack = getStack(stack)
-
     def filterStack(stack):
-        return (x[0] for x in itertools.groupby(stack))
+        # least stable to most stable
+        ignoreList = [
+            'com.android.internal.',
+            'com.android.',
+            'dalvik.',
+            'android.',
+            'java.lang.',
+        ]
+        def getStack(s):
+            return list(OrderedDict.fromkeys(
+                [processFrame(frame) for frame in s
+                 if not any(frame.startswith(prefix) for prefix in ignoreList)]))
+        out = getStack(stack)
+        while ignoreList and len(out) < 10:
+            ignoreList.pop()
+            out = getStack(stack)
+        return out
+
+    key_thread = mainThread.name
+    key_stack = filterStack(stack)
 
     def getNativeStack():
-        nativeThread = 'GeckoMain (native)'
+        nativeThread = 'Gecko (native)'
         nativeMain = anr.getThread(nativeThread)
         if nativeMain is None:
+            nativeMain = anr.getThread('GeckoMain (native)')
+        if nativeMain is None:
+            nativeThread = 'Gecko'
+            nativeMain = anr.getThread(nativeThread)
+        if nativeMain is None:
             return (key_thread, key_stack)
-        nativeStack = list(filterStack(str(f).partition('+')[0]
-            for f in nativeMain.stack if f.isPseudo))
+        nativeStack = filterStack([str(f).partition('+')[0]
+            for f in nativeMain.stack if f.isPseudo or not f.isNative])
         if not nativeStack:
             return (key_thread, key_stack)
         return (nativeThread, nativeStack)
@@ -81,13 +85,19 @@ def reduce(key, values, context):
                 counts[infovalue] = counts.get(infovalue, 0) + 1
         slugs.append(slug)
     sample = max(anrs, key=lambda anr:anr.detail)
+
+    def filterThreadName(name):
+        if name == 'GeckoMain (native)':
+            return 'Gecko (native)'
+        return name
+
     context.write(slugs[0], json.dumps({
         'info': info,
         'threads': [{
                 'name': sample.mainThread.name,
                 'stack': [str(f) for f in sample.mainThread.stack]
             }] + [{
-                'name': t.name,
+                'name': filterThreadName(t.name),
                 'stack': [str(f) for f in t.stack]
             } for t in sample.getBackgroundThreads()],
         'slugs': slugs,
