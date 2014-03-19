@@ -8,13 +8,13 @@ if [ -z "$START" -o -z "$END" ]; then
 fi
 
 if [ -z "$(which git)" ]; then
-    sudo apt-get install git
+    yes | sudo apt-get install git
 fi
 
 python -c 'import simplejson' 2>/dev/null
 if [ $? -ne 0 ]; then
-    sudo apt-get install python-dev
-    sudo pip install simplejson
+    yes | sudo apt-get install python-dev
+    yes | sudo pip install simplejson
 fi
 
 sudo chown -R ubuntu:ubuntu /mnt
