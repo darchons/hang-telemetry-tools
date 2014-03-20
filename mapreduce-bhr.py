@@ -40,10 +40,10 @@ def map(raw_key, raw_dims, raw_value, cx):
 
     def collectData(dims, info, data):
         if isinstance(data, dict):
-            data = {k: v for k, v in data.iteritems()
+            data = {k: v * (SKIP + 1) for k, v in data.iteritems()
                     if v and k.isdigit()}
         else:
-            data = {log(data): 1}
+            data = {log(data): SKIP + 1}
         return (1, {
             dim_key: {
                 dim_val: {
