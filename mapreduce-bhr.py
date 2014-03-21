@@ -7,7 +7,7 @@ import simplejson as json
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
 
-SKIP = 0
+SKIP = 49
 
 def log(x):
     return round(math.log(x + 1), 2)
@@ -87,7 +87,7 @@ def do_combine(raw_key, raw_values):
 
 def combine(raw_key, raw_values, cx):
     key, value = do_combine(raw_key, raw_values)
-    cx.combine_size = 200
+    # cx.combine_size = 200
     cx.write(key, value)
 
 def reduce(raw_key, raw_values, cx):
