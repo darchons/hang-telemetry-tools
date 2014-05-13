@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION=0.3
+VERSION=0.4
 NAME=anr
 TARBALL=${NAME}-$VERSION.tar.gz
 tar czvf $TARBALL \
