@@ -8,9 +8,12 @@ mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_anr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_anr
 
 re_subname = re.compile(r'\$\w*\d+')
+re_line = re.compile(r'\s*\(line\s*\d+\)')
 
 def processFrame(frame):
-    return re_subname.sub('$', frame)
+    frame = re_subname.sub('$', frame)
+    frame = re_line.sub('', frame)
+    return frame
 
 def map(slug, dims, value, context):
     anr = ANRReport(value)
