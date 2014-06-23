@@ -17,10 +17,17 @@ def map(slug, dims, value, context):
     mainThread = anr.mainThread
     if not mainThread:
         return
-    stack = mainThread.stack
-    stack = [str(frame).split(':')[1] for frame in stack
-             if not frame.isNative]
 
+    def getFrameKey(frame):
+        if frame.isPseudo:
+            return str(frame).partition('+')[0]
+        if not frame.isNative:
+            return str(frame).split(':')[1]
+        return str(frame).partition(':')[-1]
+
+    stack = mainThread.stack
+    stack = [getFrameKey(frame) for frame in stack
+             if not frame.isNative]
     def filterStack(stack):
         # least stable to most stable
         ignoreList = [
@@ -53,7 +60,7 @@ def map(slug, dims, value, context):
             nativeMain = anr.getThread(nativeThread)
         if nativeMain is None:
             return (key_thread, key_stack)
-        nativeStack = filterStack([str(f).partition('+')[0]
+        nativeStack = filterStack([getFrameKey(f)
             for f in nativeMain.stack if f.isPseudo or not f.isNative])
         if not nativeStack:
             return (key_thread, key_stack)
