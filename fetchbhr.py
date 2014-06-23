@@ -42,6 +42,7 @@ if __name__ == '__main__':
     }, {
         'field_name': 'appName',
         'allowed_values': [
+            'B2G',
             'Fennec',
             'Firefox',
             'Thunderbird',
