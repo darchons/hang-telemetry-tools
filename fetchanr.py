@@ -20,7 +20,7 @@ def runJob(job, dims, workdir, outfile, local=False):
                 '--data-dir', os.path.join(workdir, 'cache') if local else workdir,
                 '--work-dir', workdir,
                 '--output', outfile,
-                '--bucket', 'telemetry-published-v1']
+                '--bucket', 'telemetry-published-v2']
         if local:
             args.append('--local-only')
 
