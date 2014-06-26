@@ -2,12 +2,15 @@ import __builtin__
 import itertools
 import mapreduce_common
 import math
+import re
 import simplejson as json
 
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
 
 SKIP = 49
+
+re_line = re.compile(r':\d+')
 
 def log(x):
     return round(math.log(x + 1), 2)
@@ -35,8 +38,12 @@ def map(raw_key, raw_dims, raw_value, cx):
     except KeyError:
         return
 
+    def filterFrame(frame):
+        frame = re_line.sub('', frame)
+        return frame
+
     def filterStack(stack):
-        return (x[0] for x in itertools.groupby(stack))
+        return (filterFrame(x[0]) for x in itertools.groupby(stack))
 
     def collectData(dims, info, data):
         if isinstance(data, dict):
