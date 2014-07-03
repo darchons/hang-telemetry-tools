@@ -4,11 +4,148 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from bisect import bisect
+from collections import namedtuple
 from datetime import datetime
 import ftplib
 import os
 import subprocess
 import zipfile
+
+Symbol = namedtuple("Symbol", "library function source line")
+
+class BreakpadSymbolFile:
+    '''
+    A symbolicator targetting Breakpad-format symbol files.
+    '''
+    Func = namedtuple("Func", "start end name offset")
+
+    def __init__(self, filename):
+        '''
+        Create a symbolicator using the given symbol file name.
+        '''
+        self._filename = filename
+        self._files = {}
+        self._funcs = []
+        self._initModule()
+
+    def _initModule(self):
+        '''
+        Load MODULE record in symbol file.
+        '''
+        with open(self._filename, 'r') as f:
+            line = f.readline().strip()
+            assert line.startswith('MODULE ')
+
+        label, plat, arch, breakpadId, name = line.split(' ', 4)
+        self._architecture = arch
+        self._breakpadId = breakpadId
+        self._library = name
+        self._platform = plat
+
+    @property
+    def architecture(self):
+        '''
+        The architecture targetted by the library.
+        '''
+        return self._architecture
+
+    @property
+    def breakpad_id(self):
+        '''
+        The breakpad ID of the library represented by the symbol file.
+        '''
+        return self._breakpadId
+
+    @property
+    def library(self):
+        '''
+        The name of the library represented by the symbol file.
+        '''
+        return self._library
+
+    @property
+    def platform(self):
+        '''
+        The platform targetted by the library.
+        '''
+        return self._platform
+
+    def _listFiles(self):
+        '''
+        Load FILE records in symbol file.
+        '''
+        if self._files:
+            return
+        with open(self._filename, 'r') as f:
+            line = f.readline()
+            while line:
+                if line.startswith('FILE '):
+                    label, index, source = line.strip().split(' ', 2)
+                    self._files[index] = source
+                # FILE lines tend to be together at the beginning of the
+                # symbol file, so if we found some FILE lines but stopped
+                # seeting them, we can assume there are no more FILE lines.
+                elif self._files:
+                    break
+                line = f.readline()
+
+    def _getFile(self, index):
+        self._listFiles()
+        return self._files[index]
+
+    def _listFuncs(self):
+        '''
+        Load FUNC records in symbol file.
+        '''
+        if self._funcs:
+            return
+        with open(self._filename, 'r') as f:
+            line = f.readline()
+            while line:
+                if line.startswith('FUNC '):
+                    label, start, size, stack, name = line.strip().split(' ', 4)
+                    start = int(start, 0x10)
+                    size = int(size, 0x10)
+                    self._funcs.append(
+                        self.Func(start, start + size, name, f.tell()))
+                line = f.readline()
+
+        self._funcs.sort(key=lambda f: f.start)
+        self._funcKeys = [f.end for f in self._funcs]
+
+    def _getFunc(self, address):
+        self._listFuncs()
+        index = bisect(self._funcKeys, address)
+        if index == len(self._funcKeys) or address < self._funcs[0].start:
+            return None
+        return self._funcs[index]
+
+    def symbolicate(self, address):
+        '''
+        Given an address relative to the library,
+        return a Symbol corresponding to that address.
+        '''
+        func = self._getFunc(address)
+        if not func:
+            return None
+
+        # Get filename and line number
+        with open(self._filename, 'r') as f:
+            f.seek(func.offset)
+            line = f.readline()
+            label = line.partition(' ')[0]
+            while all(c in '0123456789abcdefABCDEF' for c in label):
+                start, size, lineno, fileno = line.strip().split(' ', 3)
+                start = int(start, 0x10)
+                size = int(size, 0x10)
+                if address >= start and address < (start + size):
+                    return Symbol(self._library, func.name,
+                                  self._getFile(fileno), int(lineno))
+                line = f.readline()
+                label = line.partition(' ')[0]
+
+        return Symbol(self._library, func.name, '(unknown)', 0)
 
 class Symbolicator:
 
