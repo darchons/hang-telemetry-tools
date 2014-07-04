@@ -149,26 +149,46 @@ class BreakpadSymbolFile:
 
 class Symbolicator:
 
-    class Mobile:
+    class Product(object):
         _SERVER = 'ftp.mozilla.org'
-        _BASE_PATH = ('/pub/mozilla.org/mobile/nightly/{build_Y}/{build_m}/'
-            '{build_Y}-{build_m}-{build_d}-{build_H}-{build_M}-{build_S}-{repo}-android')
-        _ARCH_PATH = '-{arch}'
-        _SUFFIX_PATH = '/en-US'
-        _FILE = 'fennec-{appVersion}.en-US.android-{abi}.apk'
-        _SCRATCH = '{appBuildID}-{repo}-{arch}'
-        _ABI = {'armv7': 'arm', 'armv6': 'arm-armv6', 'x86': 'i386'}
-        _MOD_EXT = '.so'
+        _SCRATCH = '{appName}-{appBuildID}-{repo}-{arch}'
+        _SYM_EXT = '.sym'
 
         def __init__(self, params):
-            params['abi'] = self._ABI[params['arch']]
             self._params = params
+            self._mods = {}
 
         def getScratch(self):
             return self._SCRATCH.format(**self._params)
 
         def getServer(self):
             return self._SERVER
+
+        def getModules(self, scratch):
+            for dirname in os.listdir(scratch):
+                if os.path.isdir(os.path.join(scratch, dirname)):
+                    yield os.path.join(scratch, dirname)
+
+        def symbolicate(self, module, address):
+            if module not in self._mods:
+                sym = os.path.join(module, next(os.listdir(module))
+                sym = os.path.join(sym, next(
+                    f for f in os.listdir(sym) if f.endswith(self._SYM_EXT)))
+                self._mods[module] = BreakpadSymbolFile(sym)
+
+            return self._mods[module].symbolicate(address)
+
+    class Mobile(Product):
+        _BASE_PATH = ('/pub/mozilla.org/mobile/nightly/{build_Y}/{build_m}/'
+            '{build_Y}-{build_m}-{build_d}-{build_H}-{build_M}-{build_S}-{repo}-android')
+        _ARCH_PATH = '-{arch}'
+        _SUFFIX_PATH = '/en-US'
+        _FILE = 'fennec-{appVersion}.en-US.android-{abi}.crashreporter-symbols.zip'
+        _ABI = {'armv7': 'arm', 'armv6': 'arm-armv6', 'x86': 'i386'}
+
+        def __init__(self, params):
+            params['abi'] = self._ABI[params['arch']]
+            super(Mobile, self).__init__(params)
 
         def getPath(self):
             path = self._BASE_PATH.format(**self._params)
@@ -180,44 +200,8 @@ class Symbolicator:
         def getFile(self):
             return self._FILE.format(**self._params)
 
-        def extractBinaries(self, archive, scratch):
-            arc = zipfile.ZipFile(archive, 'r')
-            try:
-                namelist = arc.namelist()
-                if all(os.path.exists(os.path.join(scratch, n)) for n in namelist):
-                    return
-                if not all(os.path.realpath(os.path.join(scratch, f)).startswith(
-                           os.path.realpath(scratch)) for f in namelist):
-                    raise Exception("Invalid archive")
-                arc.extractall(scratch)
-                for soname in (n for n in namelist if n.endswith(self._MOD_EXT)):
-                    subprocess.call([
-                        os.path.abspath(os.path.join(
-                            os.path.dirname(__file__), 'szip')),
-                        '-d', os.path.join(scratch, soname)])
-            finally:
-                arc.close()
-
         def splitPath(self, path):
             return path.split('/')
-
-        def getModules(self, scratch):
-            for dirpath, dirnames, filenames in os.walk(scratch):
-                for fname in filenames:
-                    if fname.endswith(self._MOD_EXT):
-                        yield os.path.join(dirpath, fname)
-
-        # returns (library, function, file, line)
-        def symbolicate(self, module, address):
-            func, file_line = subprocess.check_output([
-                os.path.abspath(os.path.join(
-                    os.path.dirname(__file__), 'arm-addr2line')),
-                '-e', module, '-ifsC', address]).splitlines()
-            fn, delim, ln = file_line.partition(':')
-            return (os.path.basename(module),
-                func if func.strip('?') else '',
-                fn if fn.strip('?') else '',
-                ln if ln.strip('?').strip('0') else '')
 
     @classmethod
     def fromBuild(cls, scratch, info):
@@ -246,7 +230,6 @@ class Symbolicator:
         self._product = product
         self._scratch = os.path.join(scratch, product.getScratch())
 
-    # returns (library, function, file, line)
     def symbolicate(self, module, address):
         device_mod = self._product.splitPath(module)
         local_mods = list(self._product.getModules(self._scratch))
@@ -263,7 +246,17 @@ class Symbolicator:
             raise Exception("Cannot find module")
         return self._product.symbolicate(matching_mods[0], address)
 
-    def fetchBinaries(self):
+    def extractSymbols(self, archive, scratch):
+        with zipfile.ZipFile(archive, 'r') as arc:
+            namelist = arc.namelist()
+            if all(os.path.exists(os.path.join(scratch, n)) for n in namelist):
+                return
+            if not all(os.path.realpath(os.path.join(scratch, f)).startswith(
+                       os.path.realpath(scratch)) for f in namelist):
+                raise Exception("Invalid archive")
+            arc.extractall(scratch)
+
+    def fetchSymbols(self):
         if not os.path.exists(self._scratch):
             os.makedirs(self._scratch)
         path = self._product.getPath()
@@ -285,14 +278,15 @@ class Symbolicator:
                 ftp.quit()
 
         if not os.path.exists(dst):
-            raise Exception("Cannot download binaries")
+            raise Exception("Cannot download symbols")
 
-        self._product.extractBinaries(dst, self._scratch)
+        self._product.extractSymbols(dst, self._scratch)
 
 def symbolicateStack(stack, sym=None, scratch=None, info=None):
     if not sym:
         sym = Symbolicator.fromBuild(scratch, info)
-        sym.fetchBinaries()
+        sym.fetchSymbols()
+
     for frame in (str(f) for f in stack):
         if not frame.startswith('c:'):
             # only C stacks need symbolicating
@@ -303,9 +297,10 @@ def symbolicateStack(stack, sym=None, scratch=None, info=None):
             yield frame
             continue
         try:
-            lib, func, fn, ln = sym.symbolicate(lib, addr)
-            if fn or ln:
-                func += ' (%s:%s)' % (fn, str(ln))
-            yield ':'.join((ident, lib, func))
+            symbol = sym.symbolicate(lib, int(addr, 0))
+            func = symbol.function
+            if symbol.source or symbol.line:
+                func += ' (%s:%s)' % (symbol.source, str(symbol.line))
+            yield ':'.join((ident, symbol.library, func))
         except:
             yield frame
