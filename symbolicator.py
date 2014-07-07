@@ -9,10 +9,13 @@ from collections import namedtuple
 from datetime import datetime
 import ftplib
 import os
+import re
 import subprocess
 import zipfile
 
 Symbol = namedtuple("Symbol", "library function source line")
+
+re_pdbfile = re.compile(r'\.pdb$', re.IGNORECASE)
 
 class BreakpadSymbolFile:
     '''
@@ -151,11 +154,15 @@ class Symbolicator:
 
     class Product(object):
         _SERVER = 'ftp.mozilla.org'
-        _SCRATCH = '{appName}-{appBuildID}-{repo}-{arch}'
+        _SCRATCH = '{appName}-{appBuildID}-{repo}-{platform}-{arch}'
         _SYM_EXT = '.sym'
 
         def __init__(self, params):
             self._params = params
+            self._params['symarch'] = (
+                'x86_64' if self._params['arch'] == 'x86-64' else
+                'arm' if self._params['arch'].startswith('arm') else
+                self._params['arch'])
             self._mods = {}
 
         def getScratch(self):
@@ -164,19 +171,63 @@ class Symbolicator:
         def getServer(self):
             return self._SERVER
 
+        def getPath(self):
+            return self._PATH.format(**self._params)
+
+        def getFile(self):
+            return self._FILE.format(**self._params)
+
         def getModules(self, scratch):
             for dirname in os.listdir(scratch):
                 if os.path.isdir(os.path.join(scratch, dirname)):
                     yield os.path.join(scratch, dirname)
 
+        def moduleMatches(self, stackMod, localMod):
+            return stackMod[-1] == localMod[-1]
+
         def symbolicate(self, module, address):
-            if module not in self._mods:
-                sym = os.path.join(module, next(os.listdir(module))
+            if module in self._mods:
+                return self._mods[module].symbolicate(address)
+
+            versions = os.listdir(module)
+            while versions:
+                sym = os.path.join(module, versions.pop())
                 sym = os.path.join(sym, next(
                     f for f in os.listdir(sym) if f.endswith(self._SYM_EXT)))
-                self._mods[module] = BreakpadSymbolFile(sym)
+                symfile = BreakpadSymbolFile(sym)
+                if symfile.architecture == self._params['symarch']:
+                    self._mods[module] = symfile
+                    return symfile.symbolicate(address)
 
-            return self._mods[module].symbolicate(address)
+    class Desktop(Product):
+        _PATH = ('/pub/mozilla.org/firefox/nightly/{build_Y}/{build_m}/'
+            '{build_Y}-{build_m}-{build_d}-{build_H}-{build_M}-{build_S}-{repo}')
+        _FILE = 'firefox-{appVersion}.en-US.{osArch}.crashreporter-symbols.zip'
+
+        def __init__(self, params):
+            params['osArch'] = (
+                'linux-i686' if params['platform'] == 'Linux' and
+                                params['arch'] == 'x86' else
+                'linux-x86_64' if params['platform'] == 'Linux' and
+                                  params['arch'] == 'x86-64' else
+                'mac' if params['platform'] == 'Darwin' else
+                'win32' if params['platform'] == 'WINNT' and
+                           params['arch'] == 'x86' else
+                'win64-x86_64' if params['platform'] == 'WINNT' and
+                                  params['arch'] == 'x86-64' else
+                'unknown'
+            )
+            super(self.__class__, self).__init__(params)
+
+        def moduleMatches(self, stackMod, localMod):
+            if self._params['platform'] != 'WINNT':
+                return super(self.__class__, self).moduleMatches(stackMod, localMod)
+
+            return stackMod[-1].lower() == re_pdbfile.sub('.dll', localMod[-1]).lower()
+
+        def splitPath(self, path):
+            return path.split('/' if self._params['platform'] != 'WINNT' else
+                              '\\')
 
     class Mobile(Product):
         _BASE_PATH = ('/pub/mozilla.org/mobile/nightly/{build_Y}/{build_m}/'
@@ -188,17 +239,14 @@ class Symbolicator:
 
         def __init__(self, params):
             params['abi'] = self._ABI[params['arch']]
-            super(Mobile, self).__init__(params)
+            super(self.__class__, self).__init__(params)
 
         def getPath(self):
             path = self._BASE_PATH.format(**self._params)
             if self._params['arch'] != 'armv7':
-                path += self._ARCH_PATH.format(arch=self._params['arch'])
+                path += self._ARCH_PATH.format(**self._params)
             path += self._SUFFIX_PATH
             return path
-
-        def getFile(self):
-            return self._FILE.format(**self._params)
 
         def splitPath(self, path):
             return path.split('/')
@@ -209,6 +257,8 @@ class Symbolicator:
         product = None
         if info.get('appName', '') == 'Fennec':
             product = cls.Mobile
+        elif info.get('appName', '') == 'Firefox':
+            product = cls.Desktop
         if 'appBuildID' in info:
             build = info['appBuildID']
             if '-' in build:
@@ -233,17 +283,13 @@ class Symbolicator:
     def symbolicate(self, module, address):
         device_mod = self._product.splitPath(module)
         local_mods = list(self._product.getModules(self._scratch))
-        depth = 0
 
-        while not depth or len(matching_mods) > 1:
-            depth += 1
-            matching_mods = []
-            for mod in local_mods:
-                local_mod = mod.split(os.path.sep)
-                if device_mod[-depth:] == local_mod[-depth:]:
-                    matching_mods.append(mod)
-        if not len(matching_mods):
+        matching_mods = [mod for mod in local_mods if
+            self._product.moduleMatches(device_mod, mod.split(os.path.sep))]
+
+        if len(matching_mods) != 1:
             raise Exception("Cannot find module")
+
         return self._product.symbolicate(matching_mods[0], address)
 
     def extractSymbols(self, archive, scratch):
@@ -280,7 +326,7 @@ class Symbolicator:
         if not os.path.exists(dst):
             raise Exception("Cannot download symbols")
 
-        self._product.extractSymbols(dst, self._scratch)
+        self.extractSymbols(dst, self._scratch)
 
 def symbolicateStack(stack, sym=None, scratch=None, info=None):
     if not sym:
