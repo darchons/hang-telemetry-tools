@@ -75,10 +75,13 @@ def map(raw_key, raw_dims, raw_value, cx):
         for frame in reversed(stack):
             if RE_ADDR.search(frame):
                 yield 'c:' + frame
-            if not RE_LINE.search(frame):
+                continue
+            if ':' not in frame:
                 yield 'p:' + frame
+                continue
             if 'revision' not in raw_info:
                 yield 'p:' + frame
+                continue
             parts = raw_info['revision'].split('/')
             yield 'p:' + frame + ' (mxr:' + parts[-3] + ':' + parts[-1] + ')'
 
