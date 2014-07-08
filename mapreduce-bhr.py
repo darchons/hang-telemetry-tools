@@ -223,7 +223,7 @@ def reduce(raw_key, raw_values, cx):
     if key[0] is None:
         sumUptimes(value[1], 10)
     elif key[1] is not None:
-        key[1] = str(uuid.uuid4())
+        key = (key[0], str(uuid.uuid4()))
 
     cx.write(json.dumps(key, separators=(',', ':')),
              json.dumps(value[1:], separators=(',', ':')))
