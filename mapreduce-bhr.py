@@ -85,13 +85,13 @@ def map(raw_key, raw_dims, raw_value, cx):
     def collectStack(dims, info, name, hang):
         return (
             (
-                formatStack(hang['stack']),
+                tuple(formatStack(hang['stack'])),
                 info['appBuildID']
             ),
             {
                 dim_key: {
                     dim_val: (
-                        formatStack(hang['nativeStack']),
+                        tuple(formatStack(hang['nativeStack'])),
                         info
                     )
                 }
