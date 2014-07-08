@@ -87,7 +87,7 @@ def map(raw_key, raw_dims, raw_value, cx):
             (
                 formatStack(hang['stack']),
                 info['appBuildID']
-            },
+            ),
             {
                 dim_key: {
                     dim_val: (
