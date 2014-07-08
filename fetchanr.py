@@ -189,6 +189,7 @@ def processBHR(index, jobfile, outdir):
             del mainthreads[slug]
 
     saveFile(outdir, 'main_thread', index, mainthreads)
+    saveFile(outdir, 'background_threads', index, nativethreads)
     for field, dim in dimsinfo.iteritems():
         saveFile(outdir, field, index['dimensions'], dim, prefix='dim_')
     for fieldname, sessionsvalue in sessions.iteritems():
