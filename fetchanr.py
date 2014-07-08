@@ -54,7 +54,7 @@ def processDims(index, dims, allowed_infos, jobfile, outdir):
             if not sym:
                 sym = symbolicator.Symbolicator.fromBuild(
                     os.path.dirname(jobfile.name), anr['symbolicatorInfo'])
-                sym.fetchBinaries()
+                sym.fetchSymbols()
             t['stack'] = list(
                 symbolicator.symbolicateStack(t['stack'], sym=sym))
         mainthread = next(t for t in anr['threads']
@@ -103,6 +103,7 @@ def processSessions(index, dims, allowed_infos, sessionsfile, outdir):
 
 def processBHR(index, jobfile, outdir):
     mainthreads = {}
+    nativethreads = {}
     dimsinfo = {}
     sessions = {}
     count_lists = {}
@@ -132,29 +133,37 @@ def processBHR(index, jobfile, outdir):
 
     for line in jobfile:
         parts = line.partition('\t')
-        stacks = json.loads(parts[0])
+        keys = json.loads(parts[0])
         stats = json.loads(parts[2])
-        if stacks[0] is None:
+        if keys[0] is None:
             # uptime measurements
             tag = 'uptime'
-            if stacks[1] is not None:
-                tag += ':' + stacks[1]
-            for k, v in stats.iteritems():
+            if keys[1] is not None:
+                tag += ':' + keys[1]
+            for k, v in stats[0].iteritems():
                 for vk, vv in v.iteritems():
                     sessions.setdefault(k, {}).setdefault(tag, {})[vk] = vv
             continue
-        if stacks[1] is None:
+        if keys[1] is None:
             # activity measurements
-            tag = 'activity:' + stacks[0]
-            for k, v in stats.iteritems():
+            tag = 'activity:' + keys[0]
+            for k, v in stats[0].iteritems():
                 sessions.setdefault(k, {})[tag] = v
             continue
         # hang measurements
-        stack = (['p:' + f for f in reversed(stacks[1])] +
-                 ['p:' + stacks[0]])
-        slug = str(uuid.uuid4())
+        # XXX FIXME
+        slug = keys[1]
+        stack = stats[1][0][0] + ['p:' + keys[0]]
         mainthreads[slug] = [{'name': 'main', 'stack': stack}]
-        for k, v in stats.iteritems():
+        for k, v in stats[1][1].iteritems():
+            for vk, vv in v.iteritems():
+                nativethreads.setdefault(slug, []).append({
+                    'name': 'native (dim:%s:%s)' % (k, vk),
+                    'stack': list(symbolicator.symbolicateStack(vv[0],
+                        scratch=os.path.dirname(jobfile.name), info=vv[1]))
+                })
+
+        for k, v in stats[0].iteritems():
             mergeHangTime(sessions.setdefault(k, {})
                                   .setdefault('hangtime', {}), slug, v)
             dimsinfo.setdefault(k, {})[slug] = adjustCounts(

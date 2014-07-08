@@ -4,13 +4,20 @@ import mapreduce_common
 import math
 import re
 import simplejson as json
+import uuid
 
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
 
 SKIP = 49
 
-re_line = re.compile(r':\d+')
+RE_LINE = re.compile(r':\d+$')
+RE_ADDR = re.compile(r':0x[\da-f]+$', re.IGNORECASE)
+
+ARCH_PRIO = 'armv7 x86-64 x86'
+# Treat Darwin, Linux, Android as having same priority,
+# because they have similar telemetry submission rates.
+PLAT_PRIO = 'WINNT'
 
 def log(x):
     return round(math.log(x + 1), 2)
@@ -39,7 +46,7 @@ def map(raw_key, raw_dims, raw_value, cx):
         return
 
     def filterFrame(frame):
-        frame = re_line.sub('', frame)
+        frame = RE_LINE.sub('', frame)
         return frame
 
     def filterStack(stack):
@@ -64,6 +71,35 @@ def map(raw_key, raw_dims, raw_value, cx):
         })
     collectedUptime = collectData(dims, info, uptime)
 
+    def formatStack(stack):
+        for frame in reversed(stack):
+            if RE_ADDR.search(frame):
+                yield 'c:' + frame
+            if not RE_LINE.search(frame):
+                yield 'p:' + frame
+            if 'revision' not in raw_info:
+                yield 'p:' + frame
+            parts = raw_info['revision'].split('/')
+            yield 'p:' + frame + ' (mxr:' + parts[-3] + ':' + parts[-1] + ')'
+
+    def collectStack(dims, info, name, hang):
+        return (
+            (
+                formatStack(hang['stack']),
+                info['appBuildID']
+            },
+            {
+                dim_key: {
+                    dim_val: (
+                        formatStack(hang['nativeStack']),
+                        info
+                    )
+                }
+                for dim_key, dim_val in dims.iteritems()
+            }
+            if 'nativeStack' in hang else None
+        )
+
     for thread in j['threadHangStats']:
         name = thread['name']
         cx.write((name, None),
@@ -72,7 +108,8 @@ def map(raw_key, raw_dims, raw_value, cx):
             if not hang['stack']:
                 continue
             cx.write((name, tuple(filterStack(hang['stack']))),
-                     collectData(dims, info, hang['histogram']['values']))
+                     collectData(dims, info, hang['histogram']['values']) +
+                     (collectStack(dims, info, name, hang),))
         cx.write((None, name), collectedUptime)
     if j['threadHangStats']:
         cx.write((None, None), collectedUptime)
@@ -88,8 +125,63 @@ def do_combine(raw_key, raw_values):
                 continue
             merge_dict(left[k], v)
         return left
+
+    def merge_stack(left, right):
+        leftStack, leftNative = left
+        rightStack, rightNative = right
+
+        if not leftNative and not rightNative:
+            # neither has native stack
+            return left if leftStack[1] >= rightStack[1] else right
+
+        if not leftNative or not rightNative:
+            # one has native stack
+            return left if leftNative else right
+
+        def merge_native_stack_info(left, right):
+            leftInfo = left[1]
+            rightInfo = right[1]
+
+            prio = (ARCH_PRIO.find(leftInfo['arch']) -
+                    ARCH_PRIO.find(rightInfo['arch']))
+            if prio != 0:
+                return left if prio > 0 else right
+
+            prio = (PLAT_PRIO.find(leftInfo['platform']) -
+                    PLAT_PRIO.find(rightInfo['platform']))
+            if prio != 0:
+                return left if prio > 0 else right
+
+            prio = cmp(leftInfo['appVersion'],
+                       rightInfo['appVersion'])
+            if prio != 0:
+                return left if prio > 0 else right
+
+            if leftInfo['appBuildID'] >= rightInfo['appBuildID']:
+                return left
+            return right
+
+        # both have native stacks
+        for dim_key, dim_vals in leftNative.iteritems():
+            if dim_key not in rightNative:
+                continue
+            for dim_val, native_stack_info in rightNative[dim_key].iteritems():
+                if dim_val not in dim_vals:
+                    dim_vals[dim_val] = native_stack_info
+                    continue
+                dim_vals[dim_val] = merge_native_stack_info(
+                    dim_vals[dim_val], native_stack_info)
+
+        return left
+
     def merge(left, right):
-        return (left[0] + right[0], merge_dict(left[1], right[1]))
+        if len(left) < 3 or len(right) < 3:
+            return (left[0] + right[0], merge_dict(left[1], right[1]))
+
+        return (left[0] + right[0],
+                merge_dict(left[1], right[1]),
+                merge_stack(left[2], right[2]))
+
     return raw_key, __builtin__.reduce(merge, raw_values)
 
 def combine(raw_key, raw_values, cx):
@@ -128,9 +220,11 @@ def reduce(raw_key, raw_values, cx):
                 for info_name, info_vals in info_names.iteritems():
                     info_names[info_name] = sumLogHistogram(info_vals, quantiles)
 
-    if raw_key[0] is None:
+    if key[0] is None:
         sumUptimes(value[1], 10)
+    elif key[1] is not None:
+        key[1] = str(uuid.uuid4())
 
     cx.write(json.dumps(key, separators=(',', ':')),
-             json.dumps(value[1], separators=(',', ':')))
+             json.dumps(value[1:], separators=(',', ':')))
 
