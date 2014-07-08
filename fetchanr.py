@@ -151,10 +151,19 @@ def processBHR(index, jobfile, outdir):
                 sessions.setdefault(k, {})[tag] = v
             continue
         # hang measurements
-        # XXX FIXME
         slug = keys[1]
         stack = stats[1][0][0] + ['p:' + keys[0]]
         mainthreads[slug] = [{'name': 'main', 'stack': stack}]
+
+        for k, v in stats[0].iteritems():
+            mergeHangTime(sessions.setdefault(k, {})
+                                  .setdefault('hangtime', {}), slug, v)
+            dimsinfo.setdefault(k, {})[slug] = adjustCounts(
+                v, slug, count_lists.setdefault(k, {}))
+
+        if not stats[1][1]:
+            continue
+
         for k, v in stats[1][1].iteritems():
             for vk, vv in v.iteritems():
                 nativethreads.setdefault(slug, []).append({
@@ -162,12 +171,6 @@ def processBHR(index, jobfile, outdir):
                     'stack': list(symbolicator.symbolicateStack(vv[0],
                         scratch=os.path.dirname(jobfile.name), info=vv[1]))
                 })
-
-        for k, v in stats[0].iteritems():
-            mergeHangTime(sessions.setdefault(k, {})
-                                  .setdefault('hangtime', {}), slug, v)
-            dimsinfo.setdefault(k, {})[slug] = adjustCounts(
-                v, slug, count_lists.setdefault(k, {}))
 
     slug_filter = []
     for dim_key, dim_vals in count_lists.iteritems():
