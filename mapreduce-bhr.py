@@ -229,20 +229,7 @@ def reduce(raw_key, raw_values, cx):
     key, value = do_combine(raw_key, raw_values)
 
     def sumLogHistogram(info_vals, quantiles):
-        keys = sorted((log, count)
-                      for histogram in info_vals.itervalues()
-                      for log, count in histogram.iteritems())
-        limit = sum(count for log, count in keys) / quantiles
-        def findBound(keys):
-            remaining = limit
-            for i, (log, count) in enumerate(keys):
-                remaining -= count
-                if remaining < 0:
-                    return log
-        lower = findBound(keys)
-        keys.reverse()
-        upper = findBound(keys)
-        return {info_val: sum(invlog(min(max(log, lower), upper)) * count
+        return {info_val: sum(invlog(log) * count
                               for log, count in histogram.iteritems())
                 for info_val, histogram in info_vals.iteritems()}
 
