@@ -123,11 +123,10 @@ def processBHR(index, jobfile, outdir):
     def mergeHangTime(dest, slug, dim_vals):
         for dim_val, info_keys in dim_vals.iteritems():
             dest_histogram = {}
-            for info_vals in info_keys.itervalues():
-                for time_histogram in info_vals.itervalues():
-                    for time, counts in time_histogram.iteritems():
-                        dest_histogram[time] = (counts +
-                            dest_histogram.get(time, 0))
+            for time_histogram in info_keys['appName'].itervalues():
+                for time, counts in time_histogram.iteritems():
+                    dest_histogram[time] = (counts +
+                        dest_histogram.get(time, 0))
             dest.setdefault(dim_val, {}).setdefault(
                 'name', {})[slug] = dest_histogram
 
