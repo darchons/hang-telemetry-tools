@@ -106,6 +106,9 @@ def adjustInfo(info):
     else:
         info['memsize'] = None
 
+    if info.get('appName') == 'B2G':
+        info['OS'] = 'B2G'
+
     if 'version' in info and 'OS' in info:
         info['os'] = (str(info['OS']) + ' ' +
             '.'.join(str(info['version']).split('-')[0].split('.')[:2]))
