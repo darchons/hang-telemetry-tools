@@ -94,6 +94,11 @@ def roundMemSize(n):
     return str(out / 1024) + 'G'
 
 def adjustInfo(info):
+    for channel in ('release', 'beta', 'aurora', 'nightly'):
+        if channel in info['appUpdateChannel'].lower():
+            info['appUpdateChannel'] = channel
+            break
+
     if ('memsize' in info and
         str(info['memsize']).isdigit() and
         int(info['memsize']) > 0):

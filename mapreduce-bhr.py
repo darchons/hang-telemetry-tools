@@ -18,6 +18,7 @@ ARCH_PRIO = 'armv7 x86-64 x86'
 # Treat Darwin, Linux, Android as having same priority,
 # because they have similar telemetry submission rates.
 PLAT_PRIO = 'WINNT'
+CHAN_PRIO = 'release beta aurora nightly'
 
 def log(x):
     return round(math.log(x + 1), 2)
@@ -89,7 +90,11 @@ def map(raw_key, raw_dims, raw_value, cx):
         return (
             (
                 tuple(formatStack(hang['stack'])),
-                info['appBuildID']
+                (
+                    info['appUpdateChannel'],
+                    info['appVersion'],
+                    info['appBuildID']
+                )
             ),
             {
                 dim_key: {
@@ -135,7 +140,21 @@ def do_combine(raw_key, raw_values):
 
         if not leftNative and not rightNative:
             # neither has native stack
-            return left if leftStack[1] >= rightStack[1] else right
+
+            # appUpdateChannel
+            prio = (CHAN_PRIO.find(leftStack[1][0]) -
+                    CHAN_PRIO.find(rightStack[1][0]))
+            if prio != 0:
+                return left if prio > 0 else right
+
+            # appVersion
+            prio = cmp(leftStack[1][1].split('.'),
+                       rightStack[1][1].split('.'))
+            if prio != 0:
+                return left if prio > 0 else right
+
+            # appBuildID
+            return left if leftStack[1][2] >= rightStack[1][2] else right
 
         if not leftNative or not rightNative:
             # one has native stack
