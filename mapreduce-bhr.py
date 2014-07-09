@@ -20,6 +20,14 @@ ARCH_PRIO = 'armv7 x86-64 x86'
 PLAT_PRIO = 'WINNT'
 CHAN_PRIO = 'release beta aurora nightly'
 
+SUMMARY = {}
+with open('summary.txt', 'r') as f:
+    for line in f:
+        info, sep, stats = line.partition('\t')
+        info = json.loads(info)
+        stats = json.loads(stats)
+        SUMMARY.setdefault(info[0], {})[info[1]] = stats[-1]
+
 def log(x):
     return round(math.log(x + 1), 2)
 
@@ -69,6 +77,8 @@ def map(raw_key, raw_dims, raw_value, cx):
                 }
             }
             for dim_key, dim_val in dims.iteritems()
+            if (uptime >= SUMMARY[dim_key][dim_val][0] and
+                uptime <= SUMMARY[dim_key][dim_val][-1])
         })
     collectedUptime = collectData(dims, info, uptime)
 

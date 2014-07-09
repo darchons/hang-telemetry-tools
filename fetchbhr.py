@@ -2,7 +2,7 @@
 
 if __name__ == '__main__':
 
-    import os, sys, tempfile
+    import os, shutil, sys, tempfile
     import simplejson as json
     from datetime import datetime, timedelta
     from fetchanr import processBHR, runJob
@@ -73,13 +73,16 @@ if __name__ == '__main__':
         'dimensions': {},
         'sessions': {},
     }
+
+    summaryout = os.path.join(outdir, 'summary.txt')
+    runJob("mapreduce-bhr-summary.py", dims, workdir,
+           summaryout, local=True)
+    shutil.copyfile(summaryout, 'summary.txt')
+
     with tempfile.NamedTemporaryFile('r', suffix='.txt', dir=workdir) as outfile:
         runJob("mapreduce-bhr.py", dims, workdir, outfile.name, local=localonly)
         with open(outfile.name, 'r') as jobfile:
             processBHR(index, jobfile, outdir)
-
-    runJob("mapreduce-bhr-summary.py", dims, workdir,
-           os.path.join(outdir, 'summary.txt'), local=True)
 
     with open(os.path.join(outdir, 'index.json'), 'w') as outfile:
         outfile.write(json.dumps(index, separators=(',', ':')))
