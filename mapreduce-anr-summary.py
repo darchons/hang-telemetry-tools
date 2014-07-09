@@ -33,5 +33,5 @@ def reduce(key, values, context):
     lower = int(round(lower))
     upper = int(round(upper))
     context.write(json.dumps(key, separators=(',', ':')), json.dumps((
-        len(values), median, lower, upper
+        len(values), sum(values), (lower, median, upper)
     ), separators=(',', ':')))
