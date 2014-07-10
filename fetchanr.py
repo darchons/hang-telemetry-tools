@@ -171,12 +171,11 @@ def processBHR(index, jobfile, outdir):
                         scratch=os.path.dirname(jobfile.name), info=vv[1]))
                 })
 
-    slug_filter = {}
+    slug_filter = set()
     for dim_key, dim_vals in count_lists.iteritems():
         for dim_val, count_list in dim_vals.iteritems():
             count_list.sort(key=lambda x: x[1], reverse=True)
-            for slug in count_list[:10]:
-                slug_filter[slug] = None
+            slug_filter.update(count_list[:10])
     for slugs in dimsinfo.itervalues():
         for slug in slugs.keys():
             if slug not in slug_filter:
