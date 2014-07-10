@@ -10,7 +10,7 @@ import uuid
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
 
-SKIP = 9
+SKIP = 0
 
 RE_LINE = re.compile(r':\d+$')
 RE_ADDR = re.compile(r':0x[\da-f]+$', re.IGNORECASE)
