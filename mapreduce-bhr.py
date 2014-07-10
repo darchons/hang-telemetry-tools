@@ -4,6 +4,7 @@ import mapreduce_common
 import math
 import re
 import simplejson as json
+import datetime
 import uuid
 
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
@@ -29,6 +30,11 @@ with open('summary.txt', 'r') as f:
         stats = json.loads(stats)
         SUMMARY.setdefault(info[0], {})[info[1]] = stats[-1]
 
+# Cut off reports from before 12 weeks (two releases) ago.
+BUILDID_CUTOFF = (
+    datetime.date.today() - datetime.timedelta(weeks=12)
+).strftime('%Y%m%d%H%M%S')
+
 def log(x):
     return round(math.log(x + 1), 2)
 
@@ -44,11 +50,17 @@ def map(raw_key, raw_dims, raw_value, cx):
         j = json.loads(raw_value)
         raw_sm = j['simpleMeasurements']
         uptime = raw_sm['uptime']
+
         if uptime < 0:
             return
         if raw_sm.get('debuggerAttached', 0):
             return
+
         raw_info = j['info']
+
+        if raw_info.get('appBuildID') < BUILDID_CUTOFF:
+            return
+
         info = mapreduce_common.filterInfo(raw_info)
         mapreduce_common.addUptime(info, j)
         dims = mapreduce_common.filterDimensions(raw_dims, info)
