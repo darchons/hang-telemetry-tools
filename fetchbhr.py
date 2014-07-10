@@ -76,11 +76,11 @@ if __name__ == '__main__':
 
     summaryout = os.path.join(outdir, 'summary.txt')
     runJob("mapreduce-bhr-summary.py", dims, workdir,
-           summaryout, local=True)
+           summaryout, local=localonly)
     shutil.copyfile(summaryout, 'summary.txt')
 
     with tempfile.NamedTemporaryFile('r', suffix='.txt', dir=workdir) as outfile:
-        runJob("mapreduce-bhr.py", dims, workdir, outfile.name, local=localonly)
+        runJob("mapreduce-bhr.py", dims, workdir, outfile.name, local=True)
         with open(outfile.name, 'r') as jobfile:
             processBHR(index, jobfile, outdir)
 
