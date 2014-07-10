@@ -171,24 +171,28 @@ def processBHR(index, jobfile, outdir):
                         scratch=os.path.dirname(jobfile.name), info=vv[1]))
                 })
 
-    slug_filter = []
+    slug_filter = {}
     for dim_key, dim_vals in count_lists.iteritems():
         for dim_val, count_list in dim_vals.iteritems():
             count_list.sort(key=lambda x: x[1], reverse=True)
-            slug_filter.extend(x[0] for x in count_list[:10])
+            for slug in count_list[:10]:
+                slug_filter[slug] = None
     for slugs in dimsinfo.itervalues():
-        for slug in list(slugs.iterkeys()):
+        for slug in slugs.keys():
             if slug not in slug_filter:
                 del slugs[slug]
     for session in sessions.itervalues():
         for info_keys in session['hangtime'].itervalues():
             slugs = info_keys['name']
-            for slug in list(slugs.iterkeys()):
+            for slug in slugs.keys():
                 if slug not in slug_filter:
                     del slugs[slug]
-    for slug in list(mainthreads.iterkeys()):
+    for slug in mainthreads.keys():
         if slug not in slug_filter:
             del mainthreads[slug]
+    for slug in nativethreads.keys():
+        if slug not in slug_filter:
+            del nativethreads[slug]
 
     saveFile(outdir, 'main_thread', index, mainthreads)
     saveFile(outdir, 'background_threads', index, nativethreads)
