@@ -13,6 +13,7 @@ SKIP = 9
 
 RE_LINE = re.compile(r':\d+$')
 RE_ADDR = re.compile(r':0x[\da-f]+$', re.IGNORECASE)
+RE_THREAD_NAME_NUM = re.compile(r'[^a-zA-Z]*\d+$')
 
 ARCH_PRIO = 'armv7 x86-64 x86'
 # Treat Darwin, Linux, Android as having same priority,
@@ -118,8 +119,12 @@ def map(raw_key, raw_dims, raw_value, cx):
             if 'nativeStack' in hang else None
         )
 
+    def filterThreadName(name):
+        name = RE_THREAD_NAME_NUM.sub('', name)
+        return name
+
     for thread in j['threadHangStats']:
-        name = thread['name']
+        name = filterThreadName(thread['name'])
         cx.write((name, None),
                  collectData(dims, info, thread['activity']['values']))
         for hang in thread['hangs']:
