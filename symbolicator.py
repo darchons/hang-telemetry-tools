@@ -331,7 +331,12 @@ class Symbolicator:
 def symbolicateStack(stack, sym=None, scratch=None, info=None):
     if not sym:
         sym = Symbolicator.fromBuild(scratch, info)
-        sym.fetchSymbols()
+        try:
+            sym.fetchSymbols()
+        except:
+            for frame in (str(f) for f in stack):
+                yield frame
+            return
 
     for frame in (str(f) for f in stack):
         if not frame.startswith('c:'):

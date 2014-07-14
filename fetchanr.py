@@ -54,7 +54,10 @@ def processDims(index, dims, allowed_infos, jobfile, outdir):
             if not sym:
                 sym = symbolicator.Symbolicator.fromBuild(
                     os.path.dirname(jobfile.name), anr['symbolicatorInfo'])
-                sym.fetchSymbols()
+                try:
+                    sym.fetchSymbols()
+                except:
+                    continue
             t['stack'] = list(
                 symbolicator.symbolicateStack(t['stack'], sym=sym))
         mainthread = next(t for t in anr['threads']

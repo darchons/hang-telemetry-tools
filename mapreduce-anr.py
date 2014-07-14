@@ -106,6 +106,10 @@ def reduce(key, values, context):
                 if filterThreadName(thread.name) == key_thread:
                     return thread
             return None
+        left_build = sample.rawData['info']['appBuildID']
+        right_build = sample.rawData['info']['appBuildID']
+        if left_build != right_build:
+            return cmp(left_build, right_build)
         left_thread = findThread(left)
         right_thread = findThread(right)
         if (left_thread and right_thread and
