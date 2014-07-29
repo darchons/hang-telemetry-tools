@@ -49,8 +49,7 @@ def processDims(index, dims, allowed_infos, jobfile, outdir):
         slugs[slug] = anr['slugs']
         for t in anr['threads']:
             sym_info = t.pop('info')
-            if ('native' not in t['name'].lower() or
-                not any(f.startswith('c:') for f in t['stack'])):
+            if not any(f.startswith('c:') for f in t['stack']):
                 # Don't symbolicate if we don't have native frames.
                 continue
             assert sym_info

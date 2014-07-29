@@ -100,9 +100,7 @@ def reduce(key, values, context):
     key_thread = key[0]
 
     def filterThreadName(name):
-        if name == 'GeckoMain (native)':
-            return 'Gecko (native)'
-        return name
+        return name.replace('GeckoMain', 'Gecko')
 
     def findKeyThread(anr):
         main = anr.mainThread
@@ -131,13 +129,13 @@ def reduce(key, values, context):
             if prio != 0:
                 return left if prio > 0 else right
 
-            prio = cmp(left_info['appVersion'].split('.'),
-                       right_info['appVersion'].split('.'))
+            prio = cmp(mapreduce_common.partitionVersion(left_info['appVersion']),
+                       mapreduce_common.partitionVersion(right_info['appVersion']))
             if prio != 0:
                 return left if prio > 0 else right
 
-            return (left if left_info['appBuildID'] >=
-                            right_info['appBuildID'] else right)
+            return (left if left_info['appBuildID'].split('-')[-1] >=
+                            right_info['appBuildID'].split('-')[-1] else right)
 
         if not left_native or not right_native:
             return left if left_native else right
@@ -152,7 +150,8 @@ def reduce(key, values, context):
         if prio != 0:
             return left if prio > 0 else right
 
-        prio = cmp(left_info['appBuildID'], right_info['appBuildID'])
+        prio = cmp(left_info['appBuildID'].split('-')[-1],
+                   right_info['appBuildID'].split('-')[-1])
         if prio != 0:
             return left if prio > 0 else right
 
