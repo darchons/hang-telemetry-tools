@@ -174,7 +174,8 @@ def reduce(key, values, context):
     display_thread = key_thread + ' (key)'
     out_threads = [{
         'name': display_thread,
-        'stack': key[0]
+        'stack': key[0],
+        'info': None
     }]
 
     for dimname, threads in dim_threads.iteritems():
