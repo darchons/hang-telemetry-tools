@@ -25,8 +25,8 @@ def map(slug, dims, value, context):
         if frame.isPseudo:
             return str(frame).partition('+')[0]
         if not frame.isNative:
-            return str(frame).split(':')[1]
-        return str(frame).partition(':')[-1]
+            return str(frame)[: (str(frame).rfind(':') + 1)]
+        raise Exception('Native frame cannot be used as key')
 
     stack = mainThread.stack
     stack = [getFrameKey(frame) for frame in stack
