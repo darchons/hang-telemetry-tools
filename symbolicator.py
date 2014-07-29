@@ -344,7 +344,7 @@ def symbolicateStack(stack, sym=None, scratch=None, info=None):
             yield frame
             continue
         ident, lib, addr = frame.split(':', 2)
-        if not addr[0].isdigit():
+        if not addr or not addr[0].isdigit():
             yield frame
             continue
         try:
