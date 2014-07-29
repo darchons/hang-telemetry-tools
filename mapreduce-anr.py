@@ -138,7 +138,7 @@ def reduce(key, values, context):
                             right_info['appBuildID'] else right)
 
         if not left_native or not right_native:
-            return left if left_native else right_native
+            return left if left_native else right
 
         prio = (ARCH_PRIO.find(left_info['arch']) -
                 ARCH_PRIO.find(right_info['arch']))
