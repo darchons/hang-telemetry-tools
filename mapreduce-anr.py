@@ -173,7 +173,7 @@ def reduce(key, values, context):
             threads = dim_threads.setdefault(dimname, {})
             threads[dimval] = merge_anr(threads.get(dimval), tup)
 
-    display_thread = key_thread + ' (key)'
+    display_thread = key_thread + ' key'
     out_threads = [{
         'name': display_thread,
         'stack': key[0],
@@ -187,13 +187,13 @@ def reduce(key, values, context):
             out_threads.append({
                 'name': '%s (dim:%s:%s)' % (main.name, dimname, dimval),
                 'stack': [str(f) for f in main.stack],
-                'info': None
+                'info': info
             })
             out_threads.extend({
                 'name': '%s (dim:%s:%s)' % (
                     filterThreadName(thr.name), dimname, dimval),
                 'stack': [str(f) for f in thr.stack],
-                'info': info if 'native' in thr.name else None
+                'info': info
             } for thr in anr.getBackgroundThreads())
 
     context.write(slugs[0], json.dumps({
