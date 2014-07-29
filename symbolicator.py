@@ -259,6 +259,8 @@ class Symbolicator:
             product = cls.Mobile
         elif info.get('appName', '') == 'Firefox':
             product = cls.Desktop
+        else:
+            return None
         if 'appBuildID' in info:
             build = info['appBuildID']
             if '-' in build:
@@ -274,6 +276,8 @@ class Symbolicator:
                 info['repo'] = 'mozilla-aurora'
             elif channel.startswith('nightly-'):
                 info['repo'] = channel.partition('-')[-1]
+            else:
+                return None
         return cls(scratch, product(info))
 
     def __init__(self, scratch, product):
