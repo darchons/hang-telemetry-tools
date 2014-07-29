@@ -85,9 +85,11 @@ def reduce(key, values, context):
     slugs = []
     for slug, dims, value in values:
         anr = ANRReport(value)
+        full_info = dict(anr.rawData['info'])
+        mapreduce_common.adjustInfo(full_info)
         raw_info = mapreduce_common.filterInfo(anr.rawData['info'])
         mapreduce_common.addUptime(raw_info, anr.rawData)
-        anrs.append((dims, raw_info, anr))
+        anrs.append((dims, full_info, anr))
         for dimname, dim in dims.iteritems():
             diminfo = info.setdefault(dimname, {}).setdefault(dim, {})
             for infokey, infovalue in raw_info.iteritems():

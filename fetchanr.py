@@ -51,6 +51,7 @@ def processDims(index, dims, allowed_infos, jobfile, outdir):
             sym_info = t.pop('info')
             if 'native' not in t['name'].lower():
                 continue
+            assert sym_info
             t['stack'] = list(
                 symbolicator.symbolicateStack(t['stack'],
                     scratch=os.path.dirname(jobfile.name), info=sym_info))
