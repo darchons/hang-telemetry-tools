@@ -47,19 +47,13 @@ def processDims(index, dims, allowed_infos, jobfile, outdir):
         anr = json.loads(line.partition('\t')[2])
         slug = anr['slugs'][0][-1]
         slugs[slug] = anr['slugs']
-        sym = None
         for t in anr['threads']:
+            sym_info = t.pop('info')
             if 'native' not in t['name'].lower():
                 continue
-            if not sym:
-                sym = symbolicator.Symbolicator.fromBuild(
-                    os.path.dirname(jobfile.name), anr['symbolicatorInfo'])
-                try:
-                    sym.fetchSymbols()
-                except:
-                    continue
             t['stack'] = list(
-                symbolicator.symbolicateStack(t['stack'], sym=sym))
+                symbolicator.symbolicateStack(t['stack'],
+                    scratch=os.path.dirname(jobfile.name), info=sym_info))
         mainthread = next(t for t in anr['threads']
                           if t['name'] == anr['display'])
         mainthreads[slug] = [mainthread]

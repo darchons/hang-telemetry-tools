@@ -9,6 +9,9 @@ mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_anr
 
 re_subname = re.compile(r'\$\w*\d+')
 
+ARCH_PRIO = 'armv7 x86'
+CHAN_PRIO = 'aurora nightly'
+
 def processFrame(frame):
     return re_subname.sub('$', frame)
 
@@ -82,9 +85,9 @@ def reduce(key, values, context):
     slugs = []
     for slug, dims, value in values:
         anr = ANRReport(value)
-        anrs.append(anr)
         raw_info = mapreduce_common.filterInfo(anr.rawData['info'])
         mapreduce_common.addUptime(raw_info, anr.rawData)
+        anrs.append((dims, raw_info, anr))
         for dimname, dim in dims.iteritems():
             diminfo = info.setdefault(dimname, {}).setdefault(dim, {})
             for infokey, infovalue in raw_info.iteritems():
@@ -93,46 +96,106 @@ def reduce(key, values, context):
         slugs.append(slug)
 
     key_thread = key[0]
+
     def filterThreadName(name):
         if name == 'GeckoMain (native)':
             return 'Gecko (native)'
         return name
-    def anrCmp(left, right):
-        def findThread(anr):
+
+    def findKeyThread(anr):
+        main = anr.mainThread
+        if main and main.name == key_thread:
+            return main
+        for thread in anr.getBackgroundThreads():
+            if filterThreadName(thread.name) == key_thread:
+                return thread
+        return None
+
+    def merge_anr(left, right):
+        if not left or not right:
+            return left if left else right
+
+        left_dims, left_info, left_anr = left
+        right_dims, right_info, right_anr = right
+
+        left_native = any('(native)' in thr.name
+                          for thr in left_anr.getBackgroundThreads())
+        right_native = any('(native)' in thr.name
+                           for thr in right_anr.getBackgroundThreads())
+
+        if not left_native and not right_native:
+            prio = (CHAN_PRIO.find(left_info['appUpdateChannel']) -
+                    CHAN_PRIO.find(right_info['appUpdateChannel']))
+            if prio != 0:
+                return left if prio > 0 else right
+
+            prio = cmp(left_info['appVersion'].split('.'),
+                       right_info['appVersion'].split('.'))
+            if prio != 0:
+                return left if prio > 0 else right
+
+            return (left if left_info['appBuildID'] >=
+                            right_info['appBuildID'] else right)
+
+        if not left_native or not right_native:
+            return left if left_native else right_native
+
+        prio = (ARCH_PRIO.find(left_info['arch']) -
+                ARCH_PRIO.find(right_info['arch']))
+        if prio != 0:
+            return left if prio > 0 else right
+
+        prio = cmp(mapreduce_common.partitionVersion(left_info['appVersion']),
+                   mapreduce_common.partitionVersion(right_info['appVersion']))
+        if prio != 0:
+            return left if prio > 0 else right
+
+        prio = cmp(left_info['appBuildID'], right_info['appBuildID'])
+        if prio != 0:
+            return left if prio > 0 else right
+
+        left_thread = findKeyThread(left_anr)
+        right_thread = findKeyThread(right_anr)
+        if left_thread and right_thread:
+            prio = cmp(len(left_thread.stack), len(right_thread.stack))
+            if prio != 0:
+                return left if prio > 0 else right
+
+        prio = cmp(left_anr.detail, right_anr.detail)
+        return left if prio >= 0 else right
+
+    dim_threads = {}
+    for tup in anrs:
+        dims, info, anr = tup
+        for dimname, dimval in dims.iteritems():
+            threads = dim_threads.setdefault(dimname, {})
+            threads[dimval] = merge_anr(threads.get(dimval), tup)
+
+    display_thread = key_thread + ' (key)'
+    threads = [{
+        'name': display_thread,
+        'stack': key[0]
+    }]
+
+    for dimname, threads in dim_threads.iteritems():
+        for dimval, tup in threads.iteritems():
+            dims, info, anr = tup
             main = anr.mainThread
-            if main and main.name == key_thread:
-                return main
-            for thread in anr.getBackgroundThreads():
-                if filterThreadName(thread.name) == key_thread:
-                    return thread
-            return None
-        left_build = sample.rawData['info']['appBuildID']
-        right_build = sample.rawData['info']['appBuildID']
-        if left_build != right_build:
-            return cmp(left_build, right_build)
-        left_thread = findThread(left)
-        right_thread = findThread(right)
-        if (left_thread and right_thread and
-            len(left_thread.stack) != len(right_thread.stack)):
-            return cmp(len(left_thread.stack), len(right_thread.stack))
-        return cmp(left.detail, right.detail)
-    sample = anrs[0]
-    for anr in anrs:
-        if anr is sample:
-            continue
-        if anrCmp(sample, anr) < 0:
-            sample = anr
+            threads.append({
+                'name': '%s (dim:%s:%s)' % (main.name, dimname, dimval),
+                'stack': [str(f) for f in main.stack],
+                'info': None
+            })
+            threads.extend({
+                'name': '%s (dim:%s:%s)' % (
+                    filterThreadName(thr.name), dimname, dimval),
+                'stack': [str(f) for f in thr.stack],
+                'info': info if 'native' in thr.name else None
+            } for thr in anr.getBackgroundThreads())
 
     context.write(slugs[0], json.dumps({
         'info': info,
-        'threads': [{
-                'name': sample.mainThread.name,
-                'stack': [str(f) for f in sample.mainThread.stack]
-            }] + [{
-                'name': filterThreadName(t.name),
-                'stack': [str(f) for f in t.stack]
-            } for t in sample.getBackgroundThreads()],
+        'threads': threads,
         'slugs': slugs,
-        'display': key_thread,
-        'symbolicatorInfo': sample.rawData['info'],
+        'display': display_thread
     }, separators=(',', ':')))
