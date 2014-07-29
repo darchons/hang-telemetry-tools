@@ -80,7 +80,7 @@ def map(slug, dims, value, context):
 def reduce(key, values, context):
     if not values or len(values) < 5:
         return
-    info = {}
+    out_info = {}
     anrs = []
     slugs = []
     for slug, dims, value in values:
@@ -91,7 +91,7 @@ def reduce(key, values, context):
         mapreduce_common.addUptime(raw_info, anr.rawData)
         anrs.append((dims, full_info, anr))
         for dimname, dim in dims.iteritems():
-            diminfo = info.setdefault(dimname, {}).setdefault(dim, {})
+            diminfo = out_info.setdefault(dimname, {}).setdefault(dim, {})
             for infokey, infovalue in raw_info.iteritems():
                 counts = diminfo.setdefault(infokey, {})
                 counts[infovalue] = counts.get(infovalue, 0) + 1
@@ -197,7 +197,7 @@ def reduce(key, values, context):
             } for thr in anr.getBackgroundThreads())
 
     context.write(slugs[0], json.dumps({
-        'info': info,
+        'info': out_info,
         'threads': out_threads,
         'slugs': slugs,
         'display': display_thread
