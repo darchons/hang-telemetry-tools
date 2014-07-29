@@ -176,7 +176,7 @@ def reduce(key, values, context):
     display_thread = key_thread + ' key'
     out_threads = [{
         'name': display_thread,
-        'stack': key[0],
+        'stack': key[-1],
         'info': None
     }]
 
