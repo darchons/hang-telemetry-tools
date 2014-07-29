@@ -93,6 +93,10 @@ def roundMemSize(n):
         return str(round(float(out) / 1024.0, 1)) + 'G'
     return str(out / 1024) + 'G'
 
+def partitionVersion(ver):
+    return [int(part) if part.isdigit() else part
+                      for part in ver.split('.')]
+
 def adjustInfo(info):
     for channel in ('release', 'beta', 'aurora', 'nightly'):
         if channel in info['appUpdateChannel'].lower():

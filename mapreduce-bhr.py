@@ -175,8 +175,8 @@ def do_combine(raw_key, raw_values):
                 return left if prio > 0 else right
 
             # appVersion
-            prio = cmp(leftStack[1][1].split('.'),
-                       rightStack[1][1].split('.'))
+            prio = cmp(mapreduce_common.partitionVersion(leftStack[1][1]),
+                       mapreduce_common.partitionVersion(rightStack[1][1]))
             if prio != 0:
                 return left if prio > 0 else right
 
@@ -201,8 +201,8 @@ def do_combine(raw_key, raw_values):
             if prio != 0:
                 return left if prio > 0 else right
 
-            prio = cmp(leftInfo['appVersion'],
-                       rightInfo['appVersion'])
+            prio = cmp(mapreduce_common.partitionVersion(leftInfo['appVersion']),
+                       mapreduce_common.partitionVersion(rightInfo['appVersion']))
             if prio != 0:
                 return left if prio > 0 else right
 
