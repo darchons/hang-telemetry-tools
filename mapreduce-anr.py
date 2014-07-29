@@ -172,7 +172,7 @@ def reduce(key, values, context):
             threads[dimval] = merge_anr(threads.get(dimval), tup)
 
     display_thread = key_thread + ' (key)'
-    threads = [{
+    out_threads = [{
         'name': display_thread,
         'stack': key[0]
     }]
@@ -181,12 +181,12 @@ def reduce(key, values, context):
         for dimval, tup in threads.iteritems():
             dims, info, anr = tup
             main = anr.mainThread
-            threads.append({
+            out_threads.append({
                 'name': '%s (dim:%s:%s)' % (main.name, dimname, dimval),
                 'stack': [str(f) for f in main.stack],
                 'info': None
             })
-            threads.extend({
+            out_threads.extend({
                 'name': '%s (dim:%s:%s)' % (
                     filterThreadName(thr.name), dimname, dimval),
                 'stack': [str(f) for f in thr.stack],
@@ -195,7 +195,7 @@ def reduce(key, values, context):
 
     context.write(slugs[0], json.dumps({
         'info': info,
-        'threads': threads,
+        'threads': out_threads,
         'slugs': slugs,
         'display': display_thread
     }, separators=(',', ':')))
