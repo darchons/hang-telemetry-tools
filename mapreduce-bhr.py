@@ -71,8 +71,13 @@ def map(raw_key, raw_dims, raw_value, cx):
         frame = RE_LINE.sub('', frame)
         return frame
 
+    FRAME_BLACKLIST = [
+        'js::RunScript',
+    ]
+
     def filterStack(stack):
-        return (filterFrame(x[0]) for x in itertools.groupby(stack))
+        return (filterFrame(x[0]) for x in itertools.groupby(stack)
+                                  if x[0] not in FRAME_BLACKLIST)
 
     def collectData(dims, info, data):
         if isinstance(data, dict):
