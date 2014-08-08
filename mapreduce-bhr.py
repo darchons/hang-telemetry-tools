@@ -192,9 +192,24 @@ def do_combine(raw_key, raw_values):
             # one has native stack
             return left if leftNative else right
 
+        leftPseudo = leftStack[0]
+        rightPseudo = rightStack[0]
+
+        def starts_with_pseudo(native, pseudo):
+            return native[0: len(pseudo)] == pseudo
+
         def merge_native_stack_info(left, right):
-            leftInfo = left[1]
-            rightInfo = right[1]
+            leftNative, leftInfo = left
+            rightNative, rightInfo = right
+
+            leftStartsWithPseudo = starts_with_pseudo(leftNative, leftPseudo)
+            rightStartsWithPseudo = starts_with_pseudo(rightNative, rightPseudo)
+
+            if leftStartsWithPseudo != rightStartsWithPseudo:
+                # because the native stack is taken some time after the pseudostack,
+                # the native stack may not correspond to the pseudostack anymore.
+                # so we prefer the native stack that starts with the pseudostack.
+                return left if leftStartsWithPseudo else right
 
             prio = (ARCH_PRIO.find(leftInfo['arch']) -
                     ARCH_PRIO.find(rightInfo['arch']))
