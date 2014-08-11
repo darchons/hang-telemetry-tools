@@ -318,6 +318,9 @@ class ANRReport:
             return
 
     def _parseProfiler(self):
+        if not self._nativeStack:
+            return
+
         if 'threads' not in self._nativeStack:
             self._nativeStack = None
             return
