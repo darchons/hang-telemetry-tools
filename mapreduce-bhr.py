@@ -220,7 +220,8 @@ def filter_reduce(raw_key, raw_values, cx):
     for group in sorted(_get_groups(),
                         key=lambda x: x[0],
                         reverse=True)[:FILTER_LIMIT]:
-        cx.write(raw_key, group)
+        cx.write(json.dumps(raw_key, separators=(',', ':')),
+                 json.dumps(group, separators=(',', ':')))
 
 def data_do_combine(raw_key, raw_values):
     def merge_dict(left, right):
