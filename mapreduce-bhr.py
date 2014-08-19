@@ -49,7 +49,7 @@ if PASS != FILTER_PASS:
             info = json.loads(info)
             stats = json.loads(stats)
             FILTER.setdefault(info[0], {}).setdefault(
-                info[1], []).append(tuple(stats[-1]))
+                info[1], []).append((stats[-1][0], tuple(stats[-1][-1])))
 
 # Cut off reports from before 12 weeks (two releases) ago.
 BUILDID_CUTOFF = (
