@@ -45,11 +45,16 @@ if PASS != FILTER_PASS:
     FILTER = {}
     with open('filter.txt', 'r') as f:
         for line in f:
-            info, sep, stats = line.partition('\t')
-            info = json.loads(info)
-            stats = json.loads(stats)
-            FILTER.setdefault(info[0], {}).setdefault(
-                info[1], []).append((stats[-1][0], tuple(stats[-1][-1])))
+            key, sep, val = line.partition('\t')
+            dim_key, dim_val = json.loads(key)
+            count, name, stack = json.loads(val)
+            counts = FILTER.setdefault(dim_key, {}).setdefault(dim_val, set())
+            if len(counts) >= FILTER_LIMIT:
+                mincount = min(counts, key=lambda x: x[0])
+                if count <= mincount:
+                    continue
+                counts.remove(mincount)
+            counts.add((count, (name, tuple(stack))))
 
 # Cut off reports from before 12 weeks (two releases) ago.
 BUILDID_CUTOFF = (
@@ -171,8 +176,8 @@ def map(raw_key, raw_dims, raw_value, cx):
                     if (uptime < SUMMARY[dim_key][dim_val][0] or
                         uptime > SUMMARY[dim_key][dim_val][-1]):
                         continue
-                    cx.write((dim_key, dim_val),
-                             (1, (name, tuple(filterStack(hang['stack'])))))
+                    cx.write((dim_key, dim_val,
+                              name, tuple(filterStack(hang['stack']))), 1)
         return
 
     assert PASS == DATA_PASS
@@ -185,13 +190,14 @@ def map(raw_key, raw_dims, raw_value, cx):
             if not hang['stack']:
                 continue
 
-            stack = tuple(filterStack(hang['stack']))
+            stack = (name, tuple(filterStack(hang['stack'])))
 
-            if not any(stack in FILTER[dim_key][dim_val]
-                       for dim_key, dim_val in dims.iteritems()):
+            if not any(stack == count[-1]
+                       for dim_key, dim_val in dims.iteritems()
+                       for count in FILTER[dim_key][dim_val]):
                 continue
 
-            cx.write((name, stack),
+            cx.write(stack,
                      collectData(dims, info, hang['histogram']['values']) +
                      (collectStack(dims, info, name, hang),))
 
@@ -200,28 +206,15 @@ def map(raw_key, raw_dims, raw_value, cx):
     if j['threadHangStats']:
         cx.write((None, None), collectedUptime)
 
+def filter_combine(raw_key, raw_values, cx):
+    cx.write(raw_key, [sum(raw_values)])
+
 def filter_reduce(raw_key, raw_values, cx):
     if not raw_values:
         return
 
-    def _get_groups():
-        sum_count = 0
-        sum_stack = raw_values[0]
-        raw_values.sort(key=lambda x: x[1])
-
-        for count, stack in raw_values:
-            if stack != sum_stack:
-                yield (sum_count, sum_stack)
-                sum_count = 0
-                sum_stack = stack
-            sum_count += count
-        yield (sum_count, sum_stack)
-
-    for group in sorted(_get_groups(),
-                        key=lambda x: x[0],
-                        reverse=True)[:FILTER_LIMIT]:
-        cx.write(json.dumps(raw_key, separators=(',', ':')),
-                 json.dumps(group, separators=(',', ':')))
+    cx.write(json.dumps(raw_key[:2], separators=(',', ':')),
+             json.dumps((sum(raw_values),) + raw_key[2:], separators=(',', ':')))
 
 def data_do_combine(raw_key, raw_values):
     def merge_dict(left, right):
@@ -353,6 +346,7 @@ def data_reduce(raw_key, raw_values, cx):
              json.dumps(value[1:], separators=(',', ':')))
 
 if PASS == FILTER_PASS:
+    combine = filter_combine
     reduce = filter_reduce
 
 elif PASS == DATA_PASS:
