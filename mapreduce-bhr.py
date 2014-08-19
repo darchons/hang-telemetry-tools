@@ -207,7 +207,7 @@ def map(raw_key, raw_dims, raw_value, cx):
         cx.write((None, None), collectedUptime)
 
 def filter_combine(raw_key, raw_values, cx):
-    cx.write(raw_key, [sum(raw_values)])
+    cx.write(raw_key, sum(raw_values))
 
 def filter_reduce(raw_key, raw_values, cx):
     if not raw_values:
