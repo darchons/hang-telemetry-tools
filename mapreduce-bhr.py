@@ -13,9 +13,9 @@ mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
 FILTER_PASS = 0
 DATA_PASS = 1
 
-if __name__ == 'mapreduce-bhr-filter':
+if 'mapreduce-bhr-filter' in __file__:
     PASS = FILTER_PASS
-elif __name__ == 'mapreduce-bhr':
+elif 'mapreduce-bhr' in __file__:
     PASS = DATA_PASS
 else:
     raise Exception('Unknown pass')
