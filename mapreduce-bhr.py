@@ -323,7 +323,6 @@ def data_do_combine(raw_key, raw_values):
 
 def data_combine(raw_key, raw_values, cx):
     key, value = data_do_combine(raw_key, raw_values)
-    cx.combine_size = 30
     cx.write(key, value)
 
 def data_reduce(raw_key, raw_values, cx):
