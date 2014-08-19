@@ -10,7 +10,18 @@ import uuid
 mapreduce_common.allowed_infos = mapreduce_common.allowed_infos_bhr
 mapreduce_common.allowed_dimensions = mapreduce_common.allowed_dimensions_bhr
 
+FILTER_PASS = 0
+DATA_PASS = 1
+
+if __name__ == 'mapreduce-bhr-filter':
+    PASS = FILTER_PASS
+elif __name__ == 'mapreduce-bhr':
+    PASS = DATA_PASS
+else:
+    raise Exception('Unknown pass')
+
 SKIP = 0
+FILTER_LIMIT = 10
 
 RE_LINE = re.compile(r':\d+$')
 RE_ADDR = re.compile(r':0x[\da-f]+$', re.IGNORECASE)
@@ -29,6 +40,16 @@ with open('summary.txt', 'r') as f:
         info = json.loads(info)
         stats = json.loads(stats)
         SUMMARY.setdefault(info[0], {})[info[1]] = stats[-1]
+
+if PASS != FILTER_PASS:
+    FILTER = {}
+    with open('filter.txt', 'r') as f:
+        for line in f:
+            info, sep, stats = line.partition('\t')
+            info = json.loads(info)
+            stats = json.loads(stats)
+            FILTER.setdefault(info[0], {}).setdefault(
+                info[1], []).append(tuple(stats[-1]))
 
 # Cut off reports from before 12 weeks (two releases) ago.
 BUILDID_CUTOFF = (
@@ -140,6 +161,22 @@ def map(raw_key, raw_dims, raw_value, cx):
         name = RE_THREAD_NAME_NUM.sub('', name)
         return name
 
+    if PASS == FILTER_PASS:
+        for thread in j['threadHangStats']:
+            name = filterThreadName(thread['name'])
+            for hang in thread['hangs']:
+                if not hang['stack']:
+                    continue
+                for dim_key, dim_val in dims.iteritems():
+                    if (uptime < SUMMARY[dim_key][dim_val][0] or
+                        uptime > SUMMARY[dim_key][dim_val][-1]):
+                        continue
+                    cx.write((dim_key, dim_val),
+                             (1, (name, tuple(filterStack(hang['stack'])))))
+        return
+
+    assert PASS == DATA_PASS
+
     for thread in j['threadHangStats']:
         name = filterThreadName(thread['name'])
         cx.write((name, None),
@@ -147,14 +184,45 @@ def map(raw_key, raw_dims, raw_value, cx):
         for hang in thread['hangs']:
             if not hang['stack']:
                 continue
-            cx.write((name, tuple(filterStack(hang['stack']))),
+
+            stack = tuple(filterStack(hang['stack']))
+
+            if not any(stack in FILTER[dim_key][dim_val]
+                       for dim_key, dim_val in dims.iteritems()):
+                continue
+
+            cx.write((name, stack),
                      collectData(dims, info, hang['histogram']['values']) +
                      (collectStack(dims, info, name, hang),))
+
         cx.write((None, name), collectedUptime)
+
     if j['threadHangStats']:
         cx.write((None, None), collectedUptime)
 
-def do_combine(raw_key, raw_values):
+def filter_reduce(raw_key, raw_values):
+    if not raw_values:
+        return
+
+    def _get_groups():
+        sum_count = 0
+        sum_stack = raw_values[0]
+        raw_values.sort(key=lambda x: x[1])
+
+        for count, stack in raw_values:
+            if stack != sum_stack:
+                yield (sum_count, sum_stack)
+                sum_count = 0
+                sum_stack = stack
+            sum_count += count
+        yield (sum_count, sum_stack)
+
+    for group in sorted(_get_groups(),
+                        key=lambda x: x[0],
+                        reverse=True)[:FILTER_LIMIT]:
+        cx.write(raw_key, group)
+
+def data_do_combine(raw_key, raw_values):
     def merge_dict(left, right):
         for k, v in right.iteritems():
             if not isinstance(v, dict):
@@ -253,17 +321,17 @@ def do_combine(raw_key, raw_values):
 
     return raw_key, __builtin__.reduce(merge, raw_values)
 
-def combine(raw_key, raw_values, cx):
-    key, value = do_combine(raw_key, raw_values)
+def data_combine(raw_key, raw_values, cx):
+    key, value = data_do_combine(raw_key, raw_values)
     cx.combine_size = 30
     cx.write(key, value)
 
-def reduce(raw_key, raw_values, cx):
+def data_reduce(raw_key, raw_values, cx):
     if (not raw_values or
         sum(x[0] for x in raw_values) < 10):
         return
 
-    key, value = do_combine(raw_key, raw_values)
+    key, value = data_do_combine(raw_key, raw_values)
 
     def sumLogHistogram(info_vals, quantiles):
         return {info_val: sum(invlog(log) * count
@@ -284,3 +352,9 @@ def reduce(raw_key, raw_values, cx):
     cx.write(json.dumps(key, separators=(',', ':')),
              json.dumps(value[1:], separators=(',', ':')))
 
+if PASS == FILTER_PASS:
+    reduce = filter_reduce
+
+elif PASS == DATA_PASS:
+    combine = data_combine
+    reduce = data_reduce

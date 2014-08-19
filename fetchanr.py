@@ -105,9 +105,8 @@ def processBHR(index, jobfile, outdir):
     nativethreads = {}
     dimsinfo = {}
     sessions = {}
-    count_lists = {}
 
-    def adjustCounts(dim_vals, slug, count_lists):
+    def adjustCounts(dim_vals, slug):
         for dim_val, info_keys in dim_vals.iteritems():
             max_count = 0
             for info_vals in info_keys.itervalues():
@@ -117,7 +116,6 @@ def processBHR(index, jobfile, outdir):
                     info_vals[val] = count
                     info_count += count
                 max_count = max(max_count, info_count)
-            count_lists.setdefault(dim_val, []).append((slug, max_count))
         return dim_vals
 
     def mergeHangTime(dest, slug, dim_vals):
@@ -157,8 +155,7 @@ def processBHR(index, jobfile, outdir):
         for k, v in stats[0].iteritems():
             mergeHangTime(sessions.setdefault(k, {})
                                   .setdefault('hangtime', {}), slug, v)
-            dimsinfo.setdefault(k, {})[slug] = adjustCounts(
-                v, slug, count_lists.setdefault(k, {}))
+            dimsinfo.setdefault(k, {})[slug] = adjustCounts(v, slug)
 
         if not stats[1][1]:
             continue
@@ -170,28 +167,6 @@ def processBHR(index, jobfile, outdir):
                     'stack': list(symbolicator.symbolicateStack(vv[0],
                         scratch=os.path.dirname(jobfile.name), info=vv[1]))
                 })
-
-    slug_filter = set()
-    for dim_key, dim_vals in count_lists.iteritems():
-        for dim_val, count_list in dim_vals.iteritems():
-            count_list.sort(key=lambda x: x[1], reverse=True)
-            slug_filter.update(x[0] for x in count_list[:10])
-    for slugs in dimsinfo.itervalues():
-        for slug in slugs.keys():
-            if slug not in slug_filter:
-                del slugs[slug]
-    for session in sessions.itervalues():
-        for info_keys in session['hangtime'].itervalues():
-            slugs = info_keys['name']
-            for slug in slugs.keys():
-                if slug not in slug_filter:
-                    del slugs[slug]
-    for slug in mainthreads.keys():
-        if slug not in slug_filter:
-            del mainthreads[slug]
-    for slug in nativethreads.keys():
-        if slug not in slug_filter:
-            del nativethreads[slug]
 
     saveFile(outdir, 'main_thread', index, mainthreads)
     saveFile(outdir, 'background_threads', index, nativethreads)
