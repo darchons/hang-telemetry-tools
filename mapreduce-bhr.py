@@ -51,7 +51,7 @@ if PASS != FILTER_PASS:
             counts = FILTER.setdefault(dim_key, {}).setdefault(dim_val, set())
             if len(counts) >= FILTER_LIMIT:
                 mincount = min(counts, key=lambda x: x[0])
-                if count <= mincount:
+                if count <= mincount[0]:
                     continue
                 counts.remove(mincount)
             counts.add((count, (name, tuple(stack))))
