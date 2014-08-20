@@ -176,8 +176,12 @@ def map(raw_key, raw_dims, raw_value, cx):
                     if (uptime < SUMMARY[dim_key][dim_val][0] or
                         uptime > SUMMARY[dim_key][dim_val][-1]):
                         continue
+                    count = hang['histogram']['values']
+                    count = (sum(v * (SKIP + 1) for k, v in count.iteritems()
+                                                if v and k.isdigit())
+                             if isinstance(count, dict) else count * (SKIP + 1))
                     cx.write((dim_key, dim_val,
-                              name, tuple(filterStack(hang['stack']))), 1)
+                              name, tuple(filterStack(hang['stack']))), count)
         return
 
     assert PASS == DATA_PASS
