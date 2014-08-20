@@ -75,14 +75,12 @@ if __name__ == '__main__':
     }
 
     summaryout = os.path.join(outdir, 'summary.txt')
-    runJob("mapreduce-bhr-summary.py", dims, workdir,
-           summaryout, local=localonly)
+    runJob("mapreduce-bhr-summary.py", dims, workdir, summaryout, local=localonly)
     shutil.copyfile(summaryout, 'summary.txt')
 
-    filterout = os.path.join(outdir, 'filter.txt')
-    runJob("mapreduce-bhr-filter.py", dims, workdir,
-           filterout, local=True)
-    shutil.copyfile(filterout, 'filter.txt')
+    with tempfile.NamedTemporaryFile('r', suffix='.txt', dir=workdir) as filterout:
+        runJob("mapreduce-bhr-filter.py", dims, workdir, filterout.name, local=True)
+        shutil.copyfile(filterout.name, 'filter.txt')
 
     with tempfile.NamedTemporaryFile('r', suffix='.txt', dir=workdir) as outfile:
         runJob("mapreduce-bhr.py", dims, workdir, outfile.name, local=True)
