@@ -46,9 +46,9 @@ if PASS != FILTER_PASS:
     with open('filter.txt', 'r') as f:
         for line in f:
             key, sep, val = line.partition('\t')
-            info_key, info_val = json.loads(key)
+            dim_key, dim_val = json.loads(key)
             count, name, stack = json.loads(val)
-            counts = FILTER.setdefault(info_key, {}).setdefault(info_val, set())
+            counts = FILTER.setdefault(dim_key, {}).setdefault(dim_val, set())
             if len(counts) >= FILTER_LIMIT:
                 mincount = min(counts, key=lambda x: x[0])
                 if count <= mincount:
@@ -167,21 +167,20 @@ def map(raw_key, raw_dims, raw_value, cx):
         return name
 
     if PASS == FILTER_PASS:
-        if not any(uptime >= SUMMARY[dim_key][dim_val][0] and
-                   uptime <= SUMMARY[dim_key][dim_val][-1]
-                   for dim_key, dim_val in dims.iteritems()):
-            return
         for thread in j['threadHangStats']:
             name = filterThreadName(thread['name'])
             for hang in thread['hangs']:
                 if not hang['stack']:
                     continue
-                for info_key, info_val in info.iteritems():
+                for dim_key, dim_val in dims.iteritems():
+                    if (uptime < SUMMARY[dim_key][dim_val][0] or
+                        uptime > SUMMARY[dim_key][dim_val][-1]):
+                        continue
                     count = hang['histogram']['values']
                     count = (sum(v * (SKIP + 1) for k, v in count.iteritems()
                                                 if v and k.isdigit())
                              if isinstance(count, dict) else count * (SKIP + 1))
-                    cx.write((info_key, info_val,
+                    cx.write((dim_key, dim_val,
                               name, tuple(filterStack(hang['stack']))), count)
         return
 
@@ -198,9 +197,8 @@ def map(raw_key, raw_dims, raw_value, cx):
             stack = (name, tuple(filterStack(hang['stack'])))
 
             if not any(stack == count[-1]
-                       for info_key, info_val in info.iteritems()
-                       if info_key in FILTER and info_val in FILTER[info_key]
-                       for count in FILTER[info_key][info_val]):
+                       for dim_key, dim_val in dims.iteritems()
+                       for count in FILTER[dim_key][dim_val]):
                 continue
 
             cx.write(stack,
