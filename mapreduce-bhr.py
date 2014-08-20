@@ -198,6 +198,7 @@ def map(raw_key, raw_dims, raw_value, cx):
 
             if not any(stack == count[-1]
                        for dim_key, dim_val in dims.iteritems()
+                       if dim_val in FILTER.get(dim_key, {})
                        for count in FILTER[dim_key][dim_val]):
                 continue
 
