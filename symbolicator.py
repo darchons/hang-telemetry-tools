@@ -223,7 +223,8 @@ class Symbolicator:
             if self._params['platform'] != 'WINNT':
                 return super(self.__class__, self).moduleMatches(stackMod, localMod)
 
-            return stackMod[-1].lower() == re_pdbfile.sub('.dll', localMod[-1]).lower()
+            return (re_pdbfile.sub('.dll', stackMod[-1]).lower() ==
+                    re_pdbfile.sub('.dll', localMod[-1]).lower())
 
         def splitPath(self, path):
             return path.split('/' if self._params['platform'] != 'WINNT' else
