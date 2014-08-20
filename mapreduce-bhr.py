@@ -102,8 +102,8 @@ def map(raw_key, raw_dims, raw_value, cx):
     ]
 
     def filterStack(stack):
-        return (filterFrame(x[0]) for x in itertools.groupby(stack)
-                                  if x[0] not in FRAME_BLACKLIST)
+        return (filterFrame(x[0]) for x in itertools.groupby(
+                f for f in stack if f not in FRAME_BLACKLIST))
 
     def collectData(dims, info, data):
         if isinstance(data, dict):
