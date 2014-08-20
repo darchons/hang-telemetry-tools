@@ -9,13 +9,10 @@ from collections import namedtuple
 from datetime import datetime
 import ftplib
 import os
-import re
 import subprocess
 import zipfile
 
 Symbol = namedtuple("Symbol", "library function source line")
-
-re_pdbfile = re.compile(r'\.pdb$', re.IGNORECASE)
 
 class BreakpadSymbolFile:
     '''
@@ -223,8 +220,8 @@ class Symbolicator:
             if self._params['platform'] != 'WINNT':
                 return super(self.__class__, self).moduleMatches(stackMod, localMod)
 
-            return (re_pdbfile.sub('.dll', stackMod[-1]).lower() ==
-                    re_pdbfile.sub('.dll', localMod[-1]).lower())
+            return (os.path.splitext(stackMod[-1])[0].lower() ==
+                    os.path.splitext(localMod[-1])[0].lower())
 
         def splitPath(self, path):
             return path.split('/' if self._params['platform'] != 'WINNT' else
