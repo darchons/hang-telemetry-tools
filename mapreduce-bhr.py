@@ -75,15 +75,19 @@ def map(raw_key, raw_dims, raw_value, cx):
     try:
         j = json.loads(raw_value)
         raw_sm = j['simpleMeasurements']
+        raw_info = j['info']
+        map_ping(j, raw_dims, raw_sm, raw_info, cx)
+    except KeyError:
+        return
+
+def map_ping(j, raw_dims, raw_sm, raw_info, cx):
+    try:
         uptime = raw_sm['uptime']
 
         if uptime < 0:
             return
         if raw_sm.get('debuggerAttached', 0):
             return
-
-        raw_info = j['info']
-
         if raw_info.get('appBuildID') < BUILDID_CUTOFF:
             return
 
@@ -210,6 +214,11 @@ def map(raw_key, raw_dims, raw_value, cx):
 
     if j['threadHangStats']:
         cx.write((None, None), collectedUptime)
+
+    if j.get('childPayloads'):
+        # process e10s child telemetry pings
+        for child in j['childPayloads']:
+            map_ping(child, raw_dims, raw_sm, raw_info, cx)
 
 def filter_combine(raw_key, raw_values, cx):
     cx.write(raw_key, sum(raw_values))
