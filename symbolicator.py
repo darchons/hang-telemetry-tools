@@ -340,7 +340,8 @@ def symbolicateStack(stack, sym=None, scratch=None, info=None):
                 yield frame
             return
 
-    for frame in (str(f) for f in stack):
+    for f in stack:
+        frame = f if isinstance(f, basestring) else str(f)
         if not frame.startswith('c:'):
             # only C stacks need symbolicating
             yield frame
