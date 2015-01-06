@@ -336,8 +336,8 @@ def symbolicateStack(stack, sym=None, scratch=None, info=None):
         try:
             sym.fetchSymbols()
         except:
-            for frame in (str(f) for f in stack):
-                yield frame
+            for f in stack:
+                yield f if isinstance(f, basestring) else str(f)
             return
 
     for f in stack:
