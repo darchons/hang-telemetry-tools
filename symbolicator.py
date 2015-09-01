@@ -150,7 +150,7 @@ class BreakpadSymbolFile:
 class Symbolicator:
 
     class Product(object):
-        _SERVER = 'ftp.mozilla.org'
+        _SERVER = '' # 'ftp.mozilla.org' is decommissioned.
         _SCRATCH = '{appName}-{appBuildID}-{repo}-{platform}-{arch}'
         _SYM_EXT = '.sym'
 
