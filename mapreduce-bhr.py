@@ -98,7 +98,7 @@ def map_ping(j, raw_dims, raw_sm, raw_info, cx):
         return
 
     def filterFrame(frame):
-        frame = RE_LINE.sub('', frame)
+        frame = RE_LINE.sub('', str(frame))
         return frame
 
     FRAME_BLACKLIST = [
@@ -167,7 +167,7 @@ def map_ping(j, raw_dims, raw_sm, raw_info, cx):
         )
 
     def filterThreadName(name):
-        name = RE_THREAD_NAME_NUM.sub('', name)
+        name = RE_THREAD_NAME_NUM.sub('', str(name))
         return name
 
     if PASS == FILTER_PASS:
